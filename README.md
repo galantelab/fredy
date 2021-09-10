@@ -44,15 +44,17 @@
 <details open="open">
   <summary>Table of Contents</summary>
   <ol>
+    <li><a href="#overview">Overview</a></li>
     <li>
-      <a href="#getting-started">Getting Started</a>
+      <a href="#installation">Installation</a>
       <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#dependencies">Dependencies</a></li>
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
+    <li><a href="#commands-and-options">Commands and options</a></li>
     <li>
-      <a href="#Running">Running</a>
+      <a href="#running">Running</a>
       <ul>
         <li><a href="#string">StringTie</a></li>
         <li><a href="#chimeric">Chimeric</a></li>
@@ -62,21 +64,23 @@
         <li><a href="#results">Results</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgements">Acknowledgements</a></li>
+    <li><a href="#authors">Authors</a></li>
   </ol>
 </details>
 
+<!-- OVERVIEW -->
+## Overview
 
+<!-- INSTALLATION -->
+## Installation
 
-<!-- GETTING STARTED -->
-## Getting Started
+### Dependencies
 
-### Prerequisites
+<!-- COMMANDS AND OPTIONS -->
+## Commands and options
 
-### Installation
 
 <!-- RUNNING -->
 ## Running
@@ -108,8 +112,8 @@ Project Link: [https://github.com/rmercuri/freddie](https://github.com/rmercuri/
 
 
 
-<!-- ACKNOWLEDGEMENTS -->
-## Acknowledgements
+<!-- AUTHORS -->
+## Authors
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
