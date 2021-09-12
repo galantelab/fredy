@@ -115,6 +115,7 @@ Project Link: [https://github.com/rmercuri/freddie](https://github.com/rmercuri/
 <!-- AUTHORS -->
 ## Authors
 Rafael Luiz Vieira Mercuri
+
 Pedro Alexandre Favoretto Galante
 
 <!-- MARKDOWN LINKS & IMAGES -->
