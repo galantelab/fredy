@@ -72,6 +72,7 @@
 
 <!-- OVERVIEW -->
 ## Overview
+Freddie is an easy-to-use pipeline to identify, quantify and determine functionality of chimeric transcripts from RNA-Seq data. The pipepline uses well-established tools to assemble the transcriptome (StringTie2) combined with tools for quantifying transcripts by pseudo-alignment (Kallisto), predicting whether or not a transcript is coding by machine learning (RNASamba) and altering protein domains by comparison (HMMER and Python3 scripts).
 
 <!-- INSTALLATION -->
 ## Installation
@@ -80,7 +81,6 @@
 
 <!-- COMMANDS AND OPTIONS -->
 ## Commands and options
-
 
 <!-- RUNNING -->
 ## Running
