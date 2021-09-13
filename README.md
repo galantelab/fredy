@@ -74,6 +74,10 @@
 ## Overview
 Freddie is an easy-to-use pipeline to identify, quantify and determine functionality of chimeric transcripts from RNA-Seq data. The pipepline uses well-established tools to assemble the transcriptome (StringTie2) combined with tools for quantifying transcripts by pseudo-alignment (Kallisto), predicting whether or not a transcript is coding by machine learning (RNASamba) and altering protein domains by comparison (HMMER and Python3 scripts).
 
+<a href="https://github.com/rmercuri/freddie">
+    <img src="images/workflow.jpg" alt="Workflow" width="80" height="80">
+</a>
+
 <!-- INSTALLATION -->
 ## Installation
 
