@@ -80,20 +80,94 @@ Freddie is an easy-to-use pipeline to identify, quantify and determine functiona
 
 <!-- INSTALLATION -->
 ## Installation
+Freddie can be obtained from Github and installed via through direct installation.
+
+`git clone https://github.com/galantelab/freddie.git`
+
+`cd freddie`
+
+`ln -s <PATH-TO-GENOME-REF> ann/hg38.fa`
+
+`ln -s <PATH-TO-GENCODE-ANNOTATION> ann/gencode.gtf`
 
 ### Dependencies
+* Docker
+* gffread
+* Hammer
+* Kallisto
+* Python3(Biopython)
+* R(ggplot2)
+* R(reshape2)
+* Stringtie2
 
 <!-- COMMANDS AND OPTIONS -->
 ## Commands and options
+Freddie works with a command and subcommands structure:
+
+`./freddie.sh [subcommand] <options>`
+
+Subcommands may be invoked by the help menu:
+
+`./freddie.sh help`
+
+6 subcommands are avaiable:
+
+Subcommand | Description
+------------ | -------------
+string | Run StringTie2
+chimeric | Finding potential chimeric transcripts
+coding | Estimates possibility of a chimeric transcript being coding
+pfam | Analyzes the domains of the sequences generated in relation to the host transcript
+expression | Measurement of transcript expression by kallisto
+results | Compile results from the previous step
 
 <!-- RUNNING -->
 ## Running
+To run the pipeline you will need STAR-aligned bam (or longSTAR for long reads) and filtered for q 255 reads and their fastq.
 
-### String
+### String  
+This subcommand uses the Stringtie 2 tool [REF] to annotate the transcriptome of your project or sample. In this step it will process all bams (which should be in input/) individually generating gtfs for each one that will be located in output_str/ and then merge them all into a single annotation file that will be in output/<project>.merge.gtf
+  
+It is recommended for this step 8 threads.
 
+**Example**
+
+`./freddie.sh string -p test -t 8`
+
+String options are:
+
+Options | Description
+------------ | -------------
+-p | Project name
+-t | Threads
+  
 ### Chimeric
+Freddie searches through the "chimeric" subcommand for events not yet annotated in the Gencode and that have a 50% overlap with the desired event position (such as Mobile Elements or Retrocopies), after this identification compares this novels transcripts with the annotated transcripts in the same region and defines which one the most similar transcript and in which region of the new transcript your event was found (Initial, Internal or Final).
+  
+The output of this subcommand is 3 files:
 
+- A gtf with the positions of the new transcripts;
+[IMG]
+
+- A tsv with the information to insert the events in the transcripts;
+[IMG]
+
+- A fasta file with the sequences of the new transcripts.
+[IMG]
+  
+**Example**
+
+`./freddie.sh chimeric -p test -i input/rtc.bed `
+
+String options are:
+
+Options | Description
+------------ | -------------
+-p | Project name
+-i | Events input BED4 file
+  
 ### Coding
+Freddie finds the new transcripts that can be encoded through the coding subcommand. In it, the RNASamba tool is used to through machine learning calculates the probability of the transcripts being translated into protein. In this module we considered as potentially translated only those with > 90% chance of being protein-coding.
 
 ### Pfam
 
@@ -104,6 +178,7 @@ Freddie is an easy-to-use pipeline to identify, quantify and determine functiona
 <!-- USAGE EXAMPLES -->
 ## Usage
 
+
 <!-- LICENSE -->
 ## License
 
@@ -113,8 +188,6 @@ Freddie is an easy-to-use pipeline to identify, quantify and determine functiona
 Rafael Luiz Vieira Mercuri - (rmercuri@mochsl.org.br)
 
 Project Link: [https://github.com/rmercuri/freddie](https://github.com/rmercuri/freddie)
-
-
 
 <!-- AUTHORS -->
 ## Authors
