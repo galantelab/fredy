@@ -144,7 +144,7 @@ Options | Description
 ### Chimeric
 Freddie searches through the "chimeric" subcommand for events not yet annotated in the Gencode and that have a 50% overlap with the desired event position (such as Mobile Elements or Retrocopies), after this identification compares this novels transcripts with the annotated transcripts in the same region and defines which one the most similar transcript and in which region of the new transcript your event was found (Initial, Internal or Final).
   
-The output of this subcommand is 3 files:
+The output of this subcommand are divided by 3 files:
 
 - A gtf with the positions of the new transcripts;
 [IMG]
@@ -169,15 +169,24 @@ Options | Description
 ### Coding
 Freddie finds the new transcripts that can be encoded through the coding subcommand. In it, the RNASamba tool is used to through machine learning calculates the probability of the transcripts being translated into protein. In this module we considered as potentially translated only those with > 90% chance of being protein-coding.
 
+The output file is a fasta file with amino acid sequence of potentially coding transcripts.
+  
+**Example**
+
+`./freddie.sh coding -p test -a <absolute-path-to-freddie> `
+
+String options are:
+
+Options | Description
+------------ | -------------
+-p | Project name
+-a | Absolute Path where Freddie was installed
+
 ### Pfam
 
 ### Expression
 
 ### Results
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
 
 <!-- LICENSE -->
 ## License
