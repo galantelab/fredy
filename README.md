@@ -132,7 +132,7 @@ It is recommended for this step 8 threads.
 
 **Example**
 
-`./freddie.sh string -p test -t 8`
+`freddie string -p test -t 8`
 
 String options are:
 
@@ -157,7 +157,7 @@ The output of this subcommand are divided by 3 files:
   
 **Example**
 
-`./freddie.sh chimeric -p test -i input/rtc.bed `
+`freddie chimeric -p test -i input/rtc.bed `
 
 Chimeric options are:
 
@@ -173,7 +173,7 @@ The output file is a fasta file with amino acid sequence of potentially coding t
   
 **Example**
 
-`./freddie.sh coding -p test -a <absolute-path-to-freddie> `
+`freddie coding -p test -a <absolute-path-to-freddie> `
 
 Coding options are:
 
@@ -189,7 +189,7 @@ The output file is a tsv file with all domain alterations founded (if it happene
   
 **Example**
   
-`./freddie.sh pfam -p test
+`freddie pfam -p test`
 
 Pfam options are:
 
@@ -205,7 +205,7 @@ The output file is a tsv file which contains a total expression of all the trans
   
 **Example**
   
-`./freddie.sh expression -p test
+`freddie expression -p test`
 
 Expression options are:
 
@@ -226,7 +226,7 @@ The output of this subcommand are divided by 2 files:
 
 **Example**
   
-`./freddie.sh results -p test
+`freddie results -p test`
 
 Results options are:
 
