@@ -113,7 +113,7 @@ string | Run StringTie2 to all the samples
 chimeric | Finding potential chimeric transcripts
 coding | Estimates possibility of a chimeric transcript being coding
 pfam | Analyzes the domains of the sequences generated in relation to the host transcript
-expression | Measurement of transcript expression by kallisto
+expression | Measurement of transcript expression
 results | Compile results from the previous step
 
 <!-- RUNNING -->
