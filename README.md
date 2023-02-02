@@ -72,7 +72,7 @@
 
 <!-- OVERVIEW -->
 ## Overview
-Freddie is an easy-to-use pipeline to identify, quantify and determine functionality of chimeric transcripts from RNA-Seq data. The pipepline uses well-established tools to assemble the transcriptome (StringTie2) combined with tools for quantifying transcripts by pseudo-alignment (Kallisto), predicting whether or not a transcript is coding by machine learning (RNASamba) and altering protein domains by comparison (HMMER and Python3 scripts).
+Freddie is an easy-to-use pipeline to identify, quantify and determine functionality of chimeric transcripts from RNA-Seq data. The pipepline uses well-established tools to assemble and quantify the transcriptome (StringTie2), predicting whether or not a transcript is coding by machine learning (RNASamba) and altering protein domains by comparison (HMMER and Python3 scripts).
 
 <a href="https://github.com/rmercuri/freddie">
     <img src="images/workflow.jpg" alt="Workflow" width="80" height="80">
@@ -86,15 +86,10 @@ Freddie can be obtained from Github and installed via through direct installatio
 
 `cd freddie`
 
-`ln -s <PATH-TO-GENOME-REF> ann/hg38.fa`
-
-`ln -s <PATH-TO-GENCODE-ANNOTATION> ann/gencode.gtf`
-
 ### Dependencies
 * Docker
 * gffread
 * Hammer
-* Kallisto
 * Python3(Biopython)
 * R(ggplot2)
 * R(reshape2)
@@ -104,17 +99,17 @@ Freddie can be obtained from Github and installed via through direct installatio
 ## Commands and options
 Freddie works with a command and subcommands structure:
 
-`./freddie.sh [subcommand] <options>`
+`freddie [subcommand] <options>`
 
 Subcommands may be invoked by the help menu:
 
-`./freddie.sh help`
+`freddie help`
 
 6 subcommands are avaiable:
 
 Subcommand | Description
 ------------ | -------------
-string | Run StringTie2
+string | Run StringTie2 to all the samples
 chimeric | Finding potential chimeric transcripts
 coding | Estimates possibility of a chimeric transcript being coding
 pfam | Analyzes the domains of the sequences generated in relation to the host transcript
@@ -126,24 +121,27 @@ results | Compile results from the previous step
 To run the pipeline you will need STAR-aligned bam (or longSTAR for long reads) and filtered for q 255 reads and their fastq.
 
 ### String  
-This subcommand uses the Stringtie 2 tool [REF] to annotate the transcriptome of your project or sample. In this step it will process all bams (which should be in input/) individually generating gtfs for each one that will be located in output_str/ and then merge them all into a single annotation file that will be in output/<project>.merge.gtf
+This subcommand uses the Stringtie 2 tool (Kovaka et al., 2019) to assembly the transcriptome of your project or sample. In this step it will process all bams (which should be in input/) individually generating gtfs for each one that will be located in output_str/ and then merge them all into a single annotation file that will be in output/<project>.merge.gtf
   
 It is recommended for this step 8 threads.
 
 **Example**
 
-`freddie string -p test -t 8`
+`freddie string -p test -f files.txt -t 8 -e long -g <gtf-path>`
 
 String options are:
 
 Options | Description
 ------------ | -------------
 -p | Project name
+-f | Path to the bam files
 -t | Threads
-  
+-e | Type of reads (short or long)
+-g | Path to the reference transcriptome
+
 ### Chimeric
-Freddie searches through the "chimeric" subcommand for events not yet annotated in the Gencode and that have a 50% overlap with the desired event position (such as Mobile Elements or Retrocopies), after this identification compares this novels transcripts with the annotated transcripts in the same region and defines which one the most similar transcript and in which region of the new transcript your event was found (Initial, Internal or Final).
-  
+Freddie searches through the "chimeric" subcommand for events not yet annotated in the reference transcriptome and that have a 50% overlap with the desired event position (such as Mobile Elements or Retrocopies) or with 50% overlap for both (exon and event), after this identification compares this novels transcripts with the annotated transcripts in the same region and defines which one the most similar transcript and in which region of the new transcript your event was found (Initial, Internal or Final).
+
 The output of this subcommand are divided by 3 files:
 
 - A gtf with the positions of the new transcripts;
@@ -157,7 +155,7 @@ The output of this subcommand are divided by 3 files:
   
 **Example**
 
-`freddie chimeric -p test -i input/rtc.bed `
+`freddie chimeric -p test -i <events-path> -g <gtf-path> -G <genome-path> -y default`
 
 Chimeric options are:
 
@@ -165,15 +163,18 @@ Options | Description
 ------------ | -------------
 -p | Project name
 -i | Events input BED4 file
-  
+-g | Path to the reference transcriptome
+-G | Path to the reference genome
+-y | Filter to considered and chimeric event (default [50% overlap of the event in the exon] or strict [50% overlap of the event in the exon and in the exon in the event])
+
 ### Coding
-Freddie finds the new transcripts that can be encoded through the coding subcommand. In it, the RNASamba tool is used to through machine learning calculates the probability of the transcripts being translated into protein. In this module we considered as potentially translated only those with > 90% chance of being protein-coding.
+Freddie finds the new transcripts that can be encoded through the coding subcommand. In it, the RNASamba tool is used to through machine learning calculates the probability of the transcripts being translated into protein. In this module we considered as potentially translated only those with >= 90% chance of being protein-coding.
 
 The output file is a fasta file with amino acid sequence of potentially coding transcripts.
   
 **Example**
 
-`freddie coding -p test -a <absolute-path-to-freddie> `
+`freddie coding -p test -a <absolute-path-to-freddie> -m <name-to-rnasambamodel> -d <path-to-proteinseq>`
 
 Coding options are:
 
@@ -181,6 +182,8 @@ Options | Description
 ------------ | -------------
 -p | Project name
 -a | Absolute path where Freddie was installed
+-m | File name of the model of RNASamba
+-d | Path to the protein sequences
 
 ### Pfam
 Freddie uses this subcommand to compare the protein domains between the identified chimeric transcripts and the transcripts most similar to this one in the host gene. Through the HMmer tool and individual scripts in Python it is possible to characterize and compare the domains of both transcripts and characterize them between: Loss (total or partial), gain or maintenance of domains.
@@ -198,20 +201,23 @@ Options | Description
 -p | Project name
 
 ### Expression
-The expression of the chimeric transcripts in the samples is done by Kallisto. In this step, we use the gtf generated by Strigtie to drive the tool. It is one of the most time consuming steps depending on the amount of sample (by default the tool analyzes 3 samples at a time using 12 cores per sample).
+The expression of the chimeric transcripts in the samples is done by StringTie2. In this step, we use the gtf generated by Strigtie as the reference transcriptome. It is one of the most time consuming steps depending on the amount of sample.
 
-The output file is a tsv file which contains a total expression of all the transcripts in all samples
+The output file is a tsv file which contains a total expression of all the transcripts in all samples. (output/$project_name/expression.tsv)
 [IMG]
   
 **Example**
   
-`freddie expression -p test`
+`freddie expression -p test -f fastq.txt -t 12 -e short`
 
 Expression options are:
 
 Options | Description
 ------------ | -------------
 -p | Project name
+-f | Path to the bam files
+-t | Threads
+-e | Type of reads (short or long)
 
 ### Results
 Use the results subcommand to summarize all the information found in the previous processes and generate graphs that compare the expression of your group of chimeric transcripts against the expression of the host gene transcript (these graphs are only generated if the chimeric transcript represents more than 15% of the total expression of the host gene).
