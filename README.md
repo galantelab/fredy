@@ -75,7 +75,7 @@
 Freddie is an easy-to-use pipeline to identify, quantify and determine functionality of chimeric transcripts from RNA-Seq data. The pipepline uses well-established tools to assemble and quantify the transcriptome (StringTie2), predicting whether or not a transcript is coding by machine learning (RNASamba) and altering protein domains by comparison (HMMER and Python3 scripts).
 
 <a href="https://github.com/rmercuri/freddie">
-    <img src="images/Workflow.jpg" alt="Workflow" width="80" height="80">
+    <img src="images/Workflow.jpg" alt="Workflow" width="1800" height="500">
 </a>
 
 <!-- INSTALLATION -->
@@ -142,16 +142,17 @@ Options | Description
 ### Chimeric
 Freddie searches through the "chimeric" subcommand for events not yet annotated in the reference transcriptome and that have a 50% overlap with the desired event position (such as Mobile Elements or Retrocopies) or with 50% overlap for both (exon and event), after this identification compares this novels transcripts with the annotated transcripts in the same region and defines which one the most similar transcript and in which region of the new transcript your event was found (Initial, Internal or Final).
 
+<a href="https://github.com/rmercuri/freddie">
+    <img src="images/scheme_quimeric.jpg" alt="Chimeric transcript" width="1800" height="500">
+</a>
+
 The output of this subcommand are divided by 3 files:
 
 - A gtf with the positions of the new transcripts;
-[IMG]
 
 - A tsv with the information to insert the events in the transcripts;
-[IMG]
 
 - A fasta file with the sequences of the new transcripts.
-[IMG]
   
 **Example**
 
