@@ -72,7 +72,7 @@
 
 <!-- OVERVIEW -->
 ## Overview
-Freddie is an easy-to-use pipeline to identify, quantify and determine functionality of chimeric transcripts from RNA-Seq data. The pipepline uses well-established tools to assemble and quantify the transcriptome (StringTie2), predicting whether or not a transcript is coding by machine learning (RNASamba) and altering protein domains by comparison (HMMER and Python3 scripts).
+Freddie is a user-friendly pipeline designed to identify, quantify, and analyze chimeric transcripts from RNA-Seq data. The pipeline utilizes well-established tools such as StringTie2 for transcriptome assembly and quantification. In addition, machine learning algorithms provided by RNASamba are used to predict whether a transcript is coding. To further enhance the analysis, Freddie also incorporates HMMER and Python3 scripts to compare protein domains and identify potential alterations. With these tools, Freddie provides a comprehensive approach to chimeric transcript analysis that is both efficient and effective.
 
 <a href="https://github.com/rmercuri/freddie">
     <img src="images/Workflow.jpg" alt="Workflow" width="1800" height="500">
@@ -90,7 +90,6 @@ Freddie can be obtained from Github and installed via through direct installatio
 * Docker
 * gffread
 * Hammer
-* Python3(Biopython)
 * R(ggplot2)
 * R(reshape2)
 * Stringtie2
@@ -118,11 +117,13 @@ results | Compile results from the previous step
 
 <!-- RUNNING -->
 ## Running
-To run the pipeline you will need STAR-aligned bam (or longSTAR for long reads) and filtered for q 255 reads and their fastq.
+To run the pipeline you will need STAR-aligned bam (or longSTAR for long reads) and filtered for q255 reads and their fastq. To execute this filter in the bam file you must use this command:
+
+`samtools view -h -b -q 255 <bam-file> -o <output-name>`
 
 ### String  
-This subcommand uses the Stringtie 2 tool (Kovaka et al., 2019) to assembly the transcriptome of your project or sample. In this step it will process all bams (which should be in input/) individually generating gtfs for each one that will be located in output_str/ and then merge them all into a single annotation file that will be in output/<project>.merge.gtf
-  
+The transcriptome of your project or sample can be assembled using the StringTie 2 tool (Kovaka et al., 2019) through the use of a specific subcommand. During this process, the tool will independently process each bam file, creating individual gtfs for each one. These gtfs will be stored in the output_str/ directory. Following this, the generated gtfs will be merged into a single annotation file that will be located in the output/ directory and named $project.merge.gtf. This final annotation file will contain the comprehensive transcriptome assembly for your project or sample.
+
 It is recommended for this step 8 threads.
 
 **Example**
@@ -140,7 +141,7 @@ Options | Description
 -g | Path to the reference transcriptome
 
 ### Chimeric
-Freddie searches through the "chimeric" subcommand for events not yet annotated in the reference transcriptome and that have a 50% overlap with the desired event position (such as Mobile Elements or Retrocopies) or with 50% overlap for both (exon and event), after this identification compares this novels transcripts with the annotated transcripts in the same region and defines which one the most similar transcript and in which region of the new transcript your event was found (Initial, Internal or Final).
+Within the "chimeric" subcommand, Freddie conducts a search for events that have not been previously annotated in the reference transcriptome and possess a 50% overlap with the desired event position. This can include events such as Mobile Elements or Retrocopies. Additionally, Freddie also searches for events that possess a 50% overlap with both the event and the exon. Following the identification of these novel transcripts, they are compared to the annotated transcripts within the same region. This allows Freddie to determine which transcript is the most similar and in which region of the novel transcript the event was found. Specifically, the location of the event within the novel transcript is identified as either initial, internal, or final, depending on its position within the transcript. This thorough approach allows for the comprehensive analysis of chimeric events and enhances the accuracy of the results.
 
 <a href="https://github.com/rmercuri/freddie">
     <img src="images/scheme_quimeric.jpg" alt="Chimeric transcript" width="1800" height="500">
@@ -169,7 +170,7 @@ Options | Description
 -y | Filter to considered and chimeric event (default [50% overlap of the event in the exon] or strict [50% overlap of the event in the exon and in the exon in the event])
 
 ### Coding
-Freddie finds the new transcripts that can be encoded through the coding subcommand. In it, the RNASamba tool is used to through machine learning calculates the probability of the transcripts being translated into protein. In this module we considered as potentially translated only those with >= 90% chance of being protein-coding.
+Freddie finds the new transcripts that can be encoded through the coding subcommand. The RNASamba tool is utilized to employ machine learning algorithms in order to calculate the probability of each transcript being translated into protein. In this module, we only consider transcripts with a probability of 90% or higher as potentially protein-coding.
 
 The output file is a fasta file with amino acid sequence of potentially coding transcripts.
   
@@ -187,7 +188,7 @@ Options | Description
 -d | Path to the protein sequences
 
 ### Pfam
-Freddie uses this subcommand to compare the protein domains between the identified chimeric transcripts and the transcripts most similar to this one in the host gene. Through the HMmer tool and individual scripts in Python it is possible to characterize and compare the domains of both transcripts and characterize them between: Loss (total or partial), gain or maintenance of domains.
+To compare the protein domains of chimeric transcripts and their closest counterparts in the host gene, Freddie employs the coding subcommand. Using the HMmer tool along with individual Python scripts, the domains of both transcripts can be characterized and compared. The domains can be classified as lost (either partially or entirely), gained, or maintained between the two transcripts.
   
 The output file is a tsv file with all domain alterations founded (if it happened) between your set of transcript chimeric amino acid sequence and the host transcript amino acid sequence
   
