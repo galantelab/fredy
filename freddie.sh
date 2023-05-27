@@ -243,7 +243,7 @@ done
 
 if [[ -z $1 ]]; then
 	help
-elif [[ "$1" != "string" && "$1" != "chimeric" && "$1" != "coding" && "$1" != "pfam" && "$1" != "expression" && "$1" != "results"]]; then
+elif [[ "$1" != "string" && "$1" != "chimeric" && "$1" != "coding" && "$1" != "pfam" && "$1" != "expression" && "$1" != "results" ]]; then
 	help
 else
 	$1
