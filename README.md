@@ -80,19 +80,9 @@ Freddie is a user-friendly pipeline designed to identify, quantify, and analyze 
 
 <!-- INSTALLATION -->
 ## Installation
-Freddie can be obtained from Github and installed via through direct installation.
+Freddie can be obtained from Dockerfile.
 
-`git clone https://github.com/galantelab/freddie.git`
-
-`cd freddie`
-
-### Dependencies
-* Docker
-* gffread
-* Hammer
-* R(ggplot2)
-* R(reshape2)
-* Stringtie2
+`docker pull galantelab/freddie:latest`
 
 <!-- COMMANDS AND OPTIONS -->
 ## Commands and options
@@ -128,14 +118,15 @@ It is recommended for this step 8 threads.
 
 **Example**
 
-`freddie string -p test -f files.txt -t 8 -e long -g <gtf-path>`
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <reference-files>:/home/ref/ -v <input-path>:/home/input/ -v <output-path>:/home/output/ galantelab/freddie:latest \
+	string -p test -f /home/input/<bam-files.txt> -t 8 -e long -g /home/ref/<gtf-path>`
 
 String options are:
 
 Options | Description
 ------------ | -------------
 -p | Project name
--f | Path to the bam files
+-f | List of bam files in input path
 -t | Threads
 -e | Type of reads (short or long)
 -g | Path to the reference transcriptome
@@ -157,7 +148,8 @@ The output of this subcommand are divided by 3 files:
   
 **Example**
 
-`freddie chimeric -p test -i <events-path> -g <gtf-path> -G <genome-path> -y default`
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <reference-files>:/home/ref/ -v <input-path>:/home/input/ -v <output-path>:/home/output/ galantelab/freddie:latest \
+	chimeric -p test -i /home/input/<events-file> -g /home/ref/<gtf-path> -G /home/ref/<genome-path> -y default`
 
 Chimeric options are:
 
@@ -176,14 +168,14 @@ The output file is a fasta file with amino acid sequence of potentially coding t
   
 **Example**
 
-`freddie coding -p test -a <absolute-path-to-freddie> -m <name-to-rnasambamodel> -d <path-to-proteinseq>`
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <reference-files>:/home/ref/ -v <input-path>:/home/input/ -v <output-path>:/home/output/ galantelab/freddie:latest \
+	coding -p test -m /home/ref/<rnasambamodel> -d /home/ref/<proteinseq-file>`
 
 Coding options are:
 
 Options | Description
 ------------ | -------------
 -p | Project name
--a | Absolute path where Freddie was installed
 -m | File name of the model of RNASamba
 -d | Path to the protein sequences
 
@@ -194,7 +186,8 @@ The output file is a tsv file with all domain alterations founded (if it happene
   
 **Example**
   
-`freddie pfam -p test`
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <reference-files>:/home/ref/ -v <input-path>:/home/input/ -v <output-path>:/home/output/ galantelab/freddie:latest \
+	pfam -p test`
 
 Pfam options are:
 
@@ -208,15 +201,16 @@ The expression of the chimeric transcripts in the samples is done by StringTie2.
 The output file is a tsv file which contains a total expression of all the transcripts in all samples. (output/$project_name/expression.tsv)
   
 **Example**
-  
-`freddie expression -p test -f fastq.txt -t 12 -e short`
+ 
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <reference-files>:/home/ref/ -v <input-path>:/home/input/ -v <output-path>:/home/output/ galantelab/freddie:latest \
+	expression -p test -f /home/input/<bam-files.txt> -t 12 -e short`
 
 Expression options are:
 
 Options | Description
 ------------ | -------------
 -p | Project name
--f | Path to the bam files
+-f | List of bam files in input path
 -t | Threads
 -e | Type of reads (short or long)
 
@@ -231,7 +225,8 @@ The output of this subcommand are divided by 2 files:
 
 **Example**
   
-`freddie results -p test`
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <reference-files>:/home/ref/ -v <input-path>:/home/input/ -v <output-path>:/home/output/ galantelab/freddie:latest \
+	results -p test`
 
 Results options are:
 
