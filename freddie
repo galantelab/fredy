@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#####   NOME:            freddie.sh
-#####   DESCRIÇÃO:       Identifica transcritos quiméricos e seus dominios adicionados (2ª Versão). Corrigindo os transcritos noncoding, redu$
+#####   NOME:            freddie
+#####   DESCRIÇÃO:       Identifica e quantifica transcritos quiméricos e caracteriza seus dominios proteícos (1ª Versão).
 #####   DATA DA CRIAÇÃO: 19/07/2020
 #####   ESCRITO POR:     Rafael L. V. Mercuri
 #####   E-MAIL:          rmercuri@mochsl.org.br
-#####	Dependências: Stringtie2, gffread, python3 (Bio), Docker, Hammer, kallisto, R(ggplot2 e reshape2)
+#####	Dependências: Stringtie2, gffread, python3, Hammer, kallisto, R(ggplot2 e reshape2) e seqtk
 
 string(){
 	## Annotation gencode
