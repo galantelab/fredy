@@ -26,11 +26,11 @@ string(){
 	echo 'Running Stringtie'
 	for i in $(cat ${fastq})
 	do
-		echo "stringtie $i.bam $paramet -G $gtf -p 2 -o output_str/${prefix}/${i/*\/}.gtf"
+		echo "stringtie $i.bam $paramet -G $gtf -p 2 -o /home/output_str/${prefix}/${i/*\/}.gtf"
 	done | parallel -j $jobs
 
 	echo 'Joining gtfs'
-	stringtie --merge -p $threads -G $gtf -o output/$prefix.merge.gtf output_str/${prefix}/*.gtf
+	stringtie --merge -p $threads -G $gtf -o /home/output/$prefix.merge.gtf /home/output_str/${prefix}/*.gtf
 
 }
 
@@ -40,92 +40,93 @@ chimeric(){
 	## freddie chimeric -p K562_short -i input/rtc.bed -g <gtf-path> -G <genome-path> -y default
 
 	echo 'Finding new transcripts'
+	mkdir /home/output/tmp/ 2> /dev/null
 
 	#Dicionário de protein codings
 
 	awk '{if ($3 == "CDS") print $10}' $gtf | sed 's/;\|"//g' | cut -d . -f 1 | sort -u \
-		| fgrep -f - output/$prefix.merge.gtf | awk -F'"' '{print $2}' | sort -u | cut -d . -f 1 > $prefix.dic.tmp
+		| fgrep -f - /home/output/$prefix.merge.gtf | awk -F'"' '{print $2}' | sort -u | cut -d . -f 1 > /home/output/tmp/$prefix.dic.tmp
 
 	#Filtro de transcritos anotados
-	fgrep "transcript_id \"MSTRG" output/$prefix.merge.gtf > output/$prefix.novels.gtf
+	fgrep "transcript_id \"MSTRG" /home/output/$prefix.merge.gtf > /home/output/$prefix.novels.gtf
 
 	#Pegando os exons dos novos transcritos
-	awk -F "\t" '{if ($3 == "exon" && $1 ~/chr/) print $1"\t"$4"\t"$5"\t"$9}' output/$prefix.novels.gtf | sort -k1,1 -k2,2n \
-		> $prefix.tmp
+	awk -F "\t" '{if ($3 == "exon" && $1 ~/chr/) print $1"\t"$4"\t"$5"\t"$9}' /home/output/$prefix.novels.gtf | sort -k1,1 -k2,2n \
+		> /home/output/tmp/$prefix.tmp
 
 	#Lista dos transcritos novos que tem RTC
 	echo 'Finding chimeric transcripts'
 	if [ ${type} = "strict" ]; then
-		bedtools intersect -r -f 0.5 -wo -a $input -b $prefix.tmp | cut -f 4,8 \
+		bedtools intersect -r -f 0.5 -wo -a $input -b /home/output/tmp/$prefix.tmp | cut -f 4,8 \
 			| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' | sed 's/"\|;//g' \
 			| sort -u | awk -v OFS="\t" '{print $1,$2,$2,$3}' \
 			| sort -k1,1 -k2,2n | bedtools merge -o collapse -i - -c 4 \
 			| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
-			> output/$prefix.chimeric.txt
+			> /home/output/$prefix.chimeric.txt
 	elif [ ${type} = "default" ]; then
-		bedtools intersect -f 0.5 -wo -a $input -b $prefix.tmp | cut -f 4,8 \
+		bedtools intersect -f 0.5 -wo -a $input -b /home/output/tmp/$prefix.tmp | cut -f 4,8 \
 			| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' | sed 's/"\|;//g' \
 			| sort -u | awk -v OFS="\t" '{print $1,$2,$2,$3}' \
 			| sort -k1,1 -k2,2n | bedtools merge -o collapse -i - -c 4 \
 			| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
-			> output/$prefix.chimeric.txt
+			> /home/output/$prefix.chimeric.txt
 	else
 		echo "Error - ${type} is not a valid parameter"
 		return
 	fi
 
 	#Montando um gtf dos transcritos novos anotados pelo stringtie
-	fgrep -w -f <(cut -f 1 output/$prefix.chimeric.txt) output/$prefix.merge.gtf > output/$prefix.protein.gtf
+	fgrep -w -f <(cut -f 1 /home/output/$prefix.chimeric.txt) /home/output/$prefix.merge.gtf > /home/output/$prefix.protein.gtf
 
 	#Montando um gtf e um bed com possiveis transcritos quiméricos
-	grep -w -f $prefix.dic.tmp output/$prefix.protein.gtf > tmp/$prefix.chimeric.tmp.gtf
-	grep -w exon tmp/$prefix.chimeric.tmp.gtf | cut -f 1,4,5,9 > tmp/$prefix.exon.bed
+	grep -w -f /home/output/tmp/$prefix.dic.tmp /home/output/$prefix.protein.gtf > /home/output/tmp/$prefix.chimeric.tmp.gtf
+	grep -w exon /home/output/tmp/$prefix.chimeric.tmp.gtf | cut -f 1,4,5,9 > /home/output/tmp/$prefix.exon.bed
 
 	#Criando um bed com todos os transcritos ja anotados de protein_coding
 	awk '{if ($3 == "CDS") print $12}' $gtf | sed 's/;\|"//g' \
 		| sort -u | fgrep -wf - $gtf | awk '{if ($3 == "exon") print}'| cut -f 1,4,5,9 \
-		| bedtools intersect -wo -a tmp/$prefix.exon.bed -b - | cut -f 4,8 | \
-	awk -F '"' '{print $4"\t"$8"\t"$10}' | sort | uniq -c | sort -k2,2 -k1,1r > tmp/$prefix.partial.tsv
+		| bedtools intersect -wo -a /home/output/tmp/$prefix.exon.bed -b - | cut -f 4,8 | \
+	awk -F '"' '{print $4"\t"$8"\t"$10}' | sort | uniq -c | sort -k2,2 -k1,1r > /home/output/tmp/$prefix.partial.tsv
 
-	> output/$prefix.most_shared.tsv
-	fgrep MSTRG tmp/$prefix.partial.tsv \
+	> /home/output/$prefix.most_shared.tsv
+	fgrep MSTRG /home/output/tmp/$prefix.partial.tsv \
 		| awk -v OFS="\t" '{if ($1 > 1) print $1,$2,$3,$4}' | sort -k2,2 -k1,1nr \
 		| awk '!D[$2]++' | awk '{print $1,$2}' \
-		| fgrep -wf - tmp/$prefix.partial.tsv | awk -F" " '{print $2"\t"$3"\t"$4}' \
-		> output/$prefix.most_shared.tsv
+		| fgrep -wf - /home/output/tmp/$prefix.partial.tsv | awk -F" " '{print $2"\t"$3"\t"$4}' \
+		> /home/output/$prefix.most_shared.tsv
 
-	fgrep -w -f <(cut -f 1 output/$prefix.most_shared.tsv| sort -u) output/$prefix.protein.gtf > tmp/$prefix.chimeric.gtf
+	fgrep -w -f <(cut -f 1 /home/output/$prefix.most_shared.tsv| sort -u) /home/output/$prefix.protein.gtf > /home/output/tmp/$prefix.chimeric.gtf
 
 	#Classificando internal initial e final
-	python3 scripts/bed_novel.py tmp/$prefix.chimeric.gtf > tmp/$prefix.info.tmp
+	python3 /app/freddie/scripts/bed_novel.py /home/output/tmp/$prefix.chimeric.gtf > /home/output/tmp/$prefix.info.tmp
 
-	sed 's/\\//g' output/$prefix.chimeric.txt > tmp/$prefix.joined.txt
+	sed 's/\\//g' /home/output/$prefix.chimeric.txt > /home/output/tmp/$prefix.joined.txt
 
-	join <(sort -k1,1 -k2,2n tmp/$prefix.info.tmp) <(sort -k1,1 -k2,2n tmp/$prefix.joined.txt) | \
+	join <(sort -k1,1 -k2,2n /home/output/tmp/$prefix.info.tmp) <(sort -k1,1 -k2,2n /home/output/tmp/$prefix.joined.txt) | \
 	awk -F " " '{if ($3 == $4 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
 	else if ($3 == $4 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
 	else if ($4 == 1 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
 	else if ($4 == 1 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
-	else print $1"\t"$2"\t"$3"\t"$4"\tNovel Internal"}' > tmp/$prefix.info.tsv
+	else print $1"\t"$2"\t"$3"\t"$4"\tNovel Internal"}' > /home/output/tmp/$prefix.info.tsv
 
-	grep -v -f <(cut -f 1 tmp/$prefix.info.tsv | uniq -c | awk '{if ($1 > 1) print $2}') tmp/$prefix.info.tsv > output/$prefix.info.tsv
-	grep -f <(cut -f 1,4 tmp/$prefix.info.tsv | uniq -c | awk '{if ($1 > 1) print $2}') tmp/$prefix.info.tsv >> output/$prefix.info.tsv
+	grep -v -f <(cut -f 1 /home/output/tmp/$prefix.info.tsv | uniq -c | awk '{if ($1 > 1) print $2}') /home/output/tmp/$prefix.info.tsv > /home/output/$prefix.info.tsv
+	grep -f <(cut -f 1,4 /home/output/tmp/$prefix.info.tsv | uniq -c | awk '{if ($1 > 1) print $2}') /home/output/tmp/$prefix.info.tsv >> /home/output/$prefix.info.tsv
 
-	cut -f 1 output/$prefix.info.tsv | fgrep -wf - tmp/$prefix.chimeric.gtf \
+	cut -f 1 /home/output/$prefix.info.tsv | fgrep -wf - /home/output/tmp/$prefix.chimeric.gtf \
 		| awk -F \" '{print $4"\t"$0}' | sort -k1,1 -k4,4r \
-		| join - <(sort -k1,1 output/$prefix.chimeric.txt) \
+		| join - <(sort -k1,1 /home/output/$prefix.chimeric.txt) \
 		| awk -v OFS="\t" -F ' ' '{if ($4 == "transcript") print $2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" chimeric_event \""$15"\"; chimeric_exon_number \""$14"\";"; \
 			else print$2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" "$14" "$15}' \
-		> output/$prefix.chimeric.gtf
+		> /home/output/$prefix.chimeric.gtf
 
 	#Arquivo fasta dos possiveis transcritos quimericos do stringtie
-	gffread output/$prefix.chimeric.gtf -g $genome -w ann/$prefix.chimeric.fasta
+	gffread /home/output/$prefix.chimeric.gtf -g $genome -w /home/output/$prefix.chimeric.fasta
 
-	rm output/$prefix.novels.gtf
-	rm output/$prefix.chimeric.txt
-	rm *${prefix}*.tmp
-	rm tmp/*${prefix}*
-	rm output/$prefix.protein.gtf
+	rm /home/output/$prefix.novels.gtf
+	rm /home/output/$prefix.chimeric.txt
+	rm /home/output/tmp/*${prefix}*.tmp
+	rm /home/output/tmp/*${prefix}*
+	rm /home/output/$prefix.protein.gtf
 }
 
 coding(){
@@ -135,63 +136,70 @@ coding(){
 
 	#Rodar o RNASamba
 	echo "Running RNASamba"
-	docker run -ti --rm -v $PWD/ann/:/app antoniopcamargo/rnasamba classify \
-		-p $prefix.predicted_proteins.fa \
-		$prefix.classification.tsv \
-		$prefix.chimeric.fasta \
-		$model
+
+	rnasamba classify \
+		-p /home/output/$prefix.predicted_proteins.fa /home/output/$prefix.classification.tsv /home/output/$prefix.chimeric.fasta $model
 
 	#Movendo os resultados do RNASamba para o output
-	mv ann/$prefix.* output/
+	#mv ann/$prefix.* output/
 
 	#Selecionando somente os transcritos dos protein_coding com protencial codificante
 	echo "Done!"
 	echo "Selecting chimeric transcripts with coding potential"
-	awk '{if ($3 >= 0.9) print $1}' output/$prefix.classification.tsv \
-		| sed 1d | grep -wf - output/$prefix.most_shared.tsv | cut -d . -f 1,2,3 | sort -u \
+	awk '{if ($3 >= 0.9) print $1}' /home/output/$prefix.classification.tsv \
+		| sed 1d | grep -wf - /home/output/$prefix.most_shared.tsv | cut -d . -f 1,2,3 | sort -u \
 		| awk '{print $2"\t"$1}' | cut -d . -f 1,2 |  awk '{print $2"\t"$1}' \
-		> $prefix.coding.txt
+		> /home/output/tmp/$prefix.coding.txt
 
-	awk '{if ($3 >= 0.9) print $1}' output/$prefix.classification.tsv | sed 1d | awk -F'.' '{print $1"."$2"."$3" gene="$1"."$2}'\
-		> $prefix.transcript.txt
+	awk '{if ($3 >= 0.9) print $1}' /home/output/$prefix.classification.tsv | sed 1d | awk -F'.' '{print $1"."$2"."$3" gene="$1"."$2}'\
+		> /home/output/tmp/$prefix.transcript.txt
 
 	#Selecionando a sequencia de AA dos respectivos.
-	seqtk subseq output/$prefix.predicted_proteins.fa $prefix.transcript.txt > output/$prefix.novel_proteins.fa
-	seqtk subseq $protein_db <(cut -f 2 $prefix.coding.txt) > output/$prefix.ann_proteins.fa
+	seqtk subseq /home/output/$prefix.predicted_proteins.fa /home/output/tmp/$prefix.transcript.txt > /home/output/$prefix.novel_proteins.fa
+	seqtk subseq $protein_db <(cut -f 2 /home/output/tmp/$prefix.coding.txt) > /home/output/$prefix.ann_proteins.fa
 }
 
 pfam(){
 	echo "Running PFAM..."
-	cat output/$prefix.novel_proteins.fa output/$prefix.ann_proteins.fa > tmp/pfam.$prefix.tmp
-	hmmsearch --tblout tmp/pfam.hmm.$prefix -E 1e-6 --cpu 4 ann/Pfam-A.hmm tmp/pfam.$prefix.tmp > log 2> log.err
+	cat /home/output/$prefix.novel_proteins.fa /home/output/$prefix.ann_proteins.fa > /home/output/tmp/pfam.$prefix.tmp
+
+	if ! [ -f /home/ref/Pfam-A.hmm ]; then
+		wget --directory-prefix=/home/ref/ ftp://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam31.0/Pfam-A.hmm.gz
+		gunzip /home/ref/Pfam-A.hmm.gz
+		hmmpress /home/ref/Pfam-A.hmm
+	fi
+
+	hmmsearch --tblout /home/output/tmp/pfam.hmm.$prefix -E 1e-6 --cpu 4 /home/ref/Pfam-A.hmm /home/output/tmp/pfam.$prefix.tmp > /home/output/tmp/log 2> /home/output/tmp/log.err
+
 	echo "Done"
 
 	echo "Comparing chimeric domains with host domains"
-	sed -i "s/\ gene=/\t/g" $prefix.transcript.txt
-	join -1 2 -2 1 <(sort -k2,2 $prefix.transcript.txt) <(sort -k1,1 $prefix.coding.txt)| sed 's/ /\t/g' \
-		> tmp/$prefix.join.txt
+	sed -i "s/\ gene=/\t/g" /home/output/tmp/$prefix.transcript.txt
+	join -1 2 -2 1 <(sort -k2,2 /home/output/tmp/$prefix.transcript.txt) <(sort -k1,1 /home/output/tmp/$prefix.coding.txt)| sed 's/ /\t/g' \
+		> /home/output/tmp/$prefix.join.txt
 
 	while read gene trans host
 	do
-		grep -w $trans tmp/pfam.hmm.$prefix > tmp/$prefix.$trans.$host.txt
-		grep -w $host tmp/pfam.hmm.$prefix >> tmp/$prefix.$trans.$host.txt
-		grep -v \# tmp/$prefix.$trans.$host.txt | awk -F" " '{print $1,$3,$6,$4}' > tmp/$prefix.pfam.tmp
-		python3 scripts/comp_dom.py tmp/$prefix.pfam.tmp $trans > tmp/$prefix.$trans.$host.pfam.tsv
-	done < tmp/$prefix.join.txt
+		grep -w $trans /home/output/tmp/pfam.hmm.$prefix > /home/output/tmp/$prefix.$trans.$host.txt
+		grep -w $host /home/output/tmp/pfam.hmm.$prefix >> /home/output/tmp/$prefix.$trans.$host.txt
+		grep -v \# /home/output/tmp/$prefix.$trans.$host.txt | awk -F" " '{print $1,$3,$6,$4}' > /home/output/tmp/$prefix.pfam.tmp
+		python3 /app/freddie/scripts/comp_dom.py /home/output/tmp/$prefix.pfam.tmp $trans > /home/output/tmp/$prefix.$trans.$host.pfam.tsv
+	done < /home/output/tmp/$prefix.join.txt
 
-        for i in $(cut -f 2 $prefix.transcript.txt)
+        for i in $(cut -f 2 /home/output/tmp/$prefix.transcript.txt)
         do
-                cat tmp/$prefix.$i.*.pfam.tsv | grep -v \# > tmp/$prefix.$i.pfamf.tsv
+                cat /home/output/tmp/$prefix.$i.*.pfam.tsv | grep -v \# > /home/output/tmp/$prefix.$i.pfamf.tsv
         done
 
-	cat tmp/$prefix.*.pfamf.tsv > output/$prefix.info_dom.tsv
+	cat /home/output/tmp/$prefix.*.pfamf.tsv > /home/output/$prefix.info_dom.tsv
 	echo "Done"
 
-	rm tmp/$prefix*
-	rm tmp/*$prefix*
-	rm $prefix.coding.txt
-	rm $prefix.transcript.txt
+	rm /home/output/tmp/$prefix*
+	rm /home/output/tmp/*$prefix*
+	rm /home/output/tmp/$prefix.coding.txt
+	rm /home/output/tmp/$prefix.transcript.txt
 }
+
 
 expression(){
 	## freddie expression -p K562_short -f fastq.txt -t 12 -e short
@@ -205,11 +213,11 @@ expression(){
 	fi
 
 	jobs=$(awk -v threads=$threads '{print int(threads/2)}' <(echo "."))
-	mkdir output/$prefix
+	mkdir /home/output/$prefix 2> /dev/null
 
 	echo "Performing expression"
 	for i in $(cat ${fastq}); do
-		echo "stringtie $i.bam $paramet -G output/$prefix.merge.gtf -p 2 -o output/$prefix/${i/*\/}_exp.gtf"
+		echo "stringtie $i.bam $paramet -G /home/output/$prefix.merge.gtf -p 2 -o /home/output/$prefix/${i/*\/}_exp.gtf"
 	done | parallel -j $jobs
 
 	echo "Done!"
@@ -218,77 +226,78 @@ expression(){
 	jobs=$(awk -v threads=$threads '{print int(threads/2)}' <(echo "."))
 	for i in $(cat ${fastq}); do
 		echo "awk -v OFS='\t' '{if (\$12 ~/ENST/ && \$3 == \"transcript\") print \$10,\$12,\$20; \
-			else if (\$12 ~/MSTRG/ && \$3 == \"transcript\") print \$10,\$12,\$18}' output/$prefix/${i/*\/}_exp.gtf | sed 's/;//g' | sed 's/\"//g' | sort -k1,1 \
-			> output/$prefix/${i/*\/}_exp.tsv"
+			else if (\$12 ~/MSTRG/ && \$3 == \"transcript\") print \$10,\$12,\$18}' /home/output/$prefix/${i/*\/}_exp.gtf | sed 's/;//g' | sed 's/\"//g' | sort -k1,1 \
+			> /home/output/$prefix/${i/*\/}_exp.tsv"
 	done | parallel -j $jobs
 
 	paste <(echo 'transcript_id') <(cat ${fastq} | awk -F'/' '{print $NF}' \
-		| tr -t '\n' '\t' | sed 's/\t$//1') > tmp/$prefix.header.tsv
+		| tr -t '\n' '\t' | sed 's/\t$//1') > /home/output/tmp/$prefix.header.tsv
 
-	arq=$(ls output/$prefix/*_exp.tsv | head -n1 )
-	cut -f 2 $arq > tmp/$prefix.transcript_id.tsv
+	arq=$(ls /home/output/$prefix/*_exp.tsv | head -n1 )
+	cut -f 2 $arq > /home/output/tmp/$prefix.transcript_id.tsv
 
-	END=$((3*$(ls output/${prefix}/*_exp.tsv | wc -l)))
-	paste output/${prefix}/*_exp.tsv | cut -f$(seq -s, 3 3 $END) > tmp/$prefix.expression.tsv
-	cat tmp/$prefix.header.tsv <(paste tmp/$prefix.transcript_id.tsv tmp/$prefix.expression.tsv) > output/${prefix}/expression.tsv
+	END=$((3*$(ls /home/output/${prefix}/*_exp.tsv | wc -l)))
+	paste /home/output/${prefix}/*_exp.tsv | cut -f$(seq -s, 3 3 $END) > /home/output/tmp/$prefix.expression.tsv
+	cat /home/output/tmp/$prefix.header.tsv <(paste /home/output/tmp/$prefix.transcript_id.tsv /home/output/tmp/$prefix.expression.tsv) > /home/output/${prefix}/expression.tsv
 	echo 'Done'
 }
 
 results(){
-	> tmp/${prefix}.nsamplespertranscript.tsv
+	> /home/output/tmp/${prefix}.nsamplespertranscript.tsv
 
 	echo "Step1"
-	for i in $(cut -f 1 output/$prefix.most_shared.tsv | sort -u); do
-		n_samples=$(grep -w $i output/${prefix}/expression.tsv | tr -t '\t' '\n' | awk '{if ($1 > 0) print}' | grep -v MSTRG | wc -l)
-		echo -e $i'\t'$n_samples >> tmp/${prefix}.nsamplespertranscript.tsv
+	for i in $(cut -f 1 /home/output/$prefix.most_shared.tsv | sort -u); do
+		n_samples=$(grep -w $i /home/output/${prefix}/expression.tsv | tr -t '\t' '\n' | awk '{if ($1 > 0) print}' | grep -v MSTRG | wc -l)
+		echo -e $i'\t'$n_samples >> /home/output/tmp/${prefix}.nsamplespertranscript.tsv
 	done
 
 	echo "Step2"
-	Rscript scripts/median.R output/${prefix}/expression.tsv output/${prefix}/median.tsv
+	Rscript /app/freddie/scripts/median.R /home/output/${prefix}/expression.tsv /home/output/${prefix}/median.tsv
 
-	awk -F '.' '{print $0"\t"$1"."$2}' output/$prefix.most_shared.tsv > tmp/$prefix.most_shared.tsv
+	awk -F '.' '{print $0"\t"$1"."$2}' /home/output/$prefix.most_shared.tsv > /home/output/tmp/$prefix.most_shared.tsv
 
 	#Colocar uma coluna 4 com o id_gene não so o id_trans (MSTRG.X além de MSTRG.X.Y)
 	echo "Step3"
-	> tmp/$prefix.host_expression
-	> tmp/$prefix.chimeric_expression
-	> tmp/${prefix}.psi.tsv
+	> /home/output/tmp/$prefix.host_expression
+	> /home/output/tmp/$prefix.chimeric_expression
+	> /home/output/tmp/${prefix}.psi.tsv
 
-	for i in $(cut -f 4 tmp/$prefix.most_shared.tsv | sort -u); do
-		head -n1 output/${prefix}/expression.tsv > tmp/$prefix.chimeric_expression
-		head -n1 output/${prefix}/expression.tsv > tmp/$prefix.host_expression
-		grep -w $i tmp/$prefix.most_shared.tsv | cut -f 1 | fgrep -wf - output/${prefix}/expression.tsv >> tmp/$prefix.chimeric_expression
-		grep -w $i tmp/$prefix.most_shared.tsv | cut -f 2 | fgrep -wf - output/${prefix}.merge.gtf | \
+	for i in $(cut -f 4 /home/output/tmp/$prefix.most_shared.tsv | sort -u); do
+		head -n1 /home/output/${prefix}/expression.tsv > /home/output/tmp/$prefix.chimeric_expression
+		head -n1 /home/output/${prefix}/expression.tsv > /home/output/tmp/$prefix.host_expression
+		grep -w $i /home/output/tmp/$prefix.most_shared.tsv | cut -f 1 | fgrep -wf - /home/output/${prefix}/expression.tsv >> /home/output/tmp/$prefix.chimeric_expression
+		grep -w $i /home/output/tmp/$prefix.most_shared.tsv | cut -f 2 | fgrep -wf - /home/output/${prefix}.merge.gtf | \
 		fgrep -v exon | awk -F '"' '{print $4}' | \
-		fgrep -wf - output/${prefix}/expression.tsv >> tmp/$prefix.host_expression
-		Rscript scripts/psi.R tmp/$prefix.host_expression tmp/$prefix.chimeric_expression $i >> tmp/${prefix}.psi.tsv
+		fgrep -wf - /home/output/${prefix}/expression.tsv >> /home/output/tmp/$prefix.host_expression
+		Rscript /app/freddie/scripts/psi.R /home/output/tmp/$prefix.host_expression /home/output/tmp/$prefix.chimeric_expression $i >> /home/output/tmp/${prefix}.psi.tsv
 	done
 
-	rm tmp/$prefix.chimeric_expression
-	rm tmp/$prefix.host_expression
+	rm /home/output/tmp/$prefix.chimeric_expression
+	rm /home/output/tmp/$prefix.host_expression
 
-	echo -e 'Id\tGene\tTranscript\tEvent_in\tSamples\tExpression_Median\tPsi\tCoding(?)\tObs' > output/${prefix}.results
-	join <(sort -k1,1 tmp/${prefix}.most_shared.tsv) <(sort -k1,1 output/${prefix}.info.tsv| cut -f 1,5) | sed 's/Novel //g' | \
-	join - <(sort -k1,1 tmp/${prefix}.nsamplespertranscript.tsv) | \
-	join - <(sed 's/"//g' output/${prefix}/median.tsv | sort -k1,1) | sort -k4,4 | \
-	join -1 4 -2 1 - <(sort tmp/${prefix}.psi.tsv) | sort -k2,2 | \
-	join -1 2 -2 1 - <(sort output/${prefix}.classification.tsv | sort -k1,1 | \
+	echo -e 'Id\tGene\tTranscript\tEvent_in\tSamples\tExpression_Median\tPsi\tCoding(?)\tObs' > /home/output/${prefix}.results
+	join <(sort -k1,1 /home/output/tmp/${prefix}.most_shared.tsv) <(sort -k1,1 /home/output/${prefix}.info.tsv| cut -f 1,5) | sed 's/Novel //g' | \
+	join - <(sort -k1,1 /home/output/tmp/${prefix}.nsamplespertranscript.tsv) | \
+	join - <(sed 's/"//g' /home/output/${prefix}/median.tsv | sort -k1,1) | sort -k4,4 | \
+	join -1 4 -2 1 - <(sort /home/output/tmp/${prefix}.psi.tsv) | sort -k2,2 | \
+	join -1 2 -2 1 - <(sort /home/output/${prefix}.classification.tsv | sort -k1,1 | \
 	awk '{if ($3 > 0.9) print $1"\tCoding"; else print $1"\tNon-Coding"}') | \
-	join -a 1 - <(sort output/${prefix}.info_dom.tsv | cut -f 1,5 | sed 's/\ /espaco/g' | sort -k1,1) | \
-	awk '{$2=""; print $0}' - | sed 's/\ /\t/g' | sed 's/espaco/\ /g' >> output/${prefix}.results
+	join -a 1 - <(sort /home/output/${prefix}.info_dom.tsv | cut -f 1,5 | sed 's/\ /espaco/g' | sort -k1,1) | \
+	awk '{$2=""; print $0}' - | sed 's/\ /\t/g' | sed 's/espaco/\ /g' >> /home/output/${prefix}.results
 
 
-	mkdir figures/$prefix
+	mkdir /home/output/$prefix/figures 2> /dev/null
 
-	for i in $(awk '{if ($2 >= 0.15) print $1}' tmp/${prefix}.psi.tsv| sort -u) ; do
-		head -n1 output/${prefix}/expression.tsv > tmp/$prefix.chimeric_expression
-		head -n1 output/${prefix}/expression.tsv > tmp/$prefix.host_expression
-		grep -w $i output/$prefix.most_shared.tsv | cut -f 1 | fgrep -wf - output/${prefix}/expression.tsv >> tmp/$prefix.chimeric_expression
-		grep -w $i output/$prefix.most_shared.tsv | cut -f 3 | fgrep -wf - output/${prefix}/expression.tsv >> tmp/$prefix.host_expression
-		Rscript scripts/boxplot_alt.R tmp/$prefix.host_expression tmp/$prefix.chimeric_expression figures/$prefix/$i.svg
+	for i in $(awk '{if ($2 >= 0.15) print $1}' /home/output/tmp/${prefix}.psi.tsv| sort -u) ; do
+		head -n1 /home/output/${prefix}/expression.tsv > /home/output/tmp/$prefix.chimeric_expression
+		head -n1 /home/output/${prefix}/expression.tsv > /home/output/tmp/$prefix.host_expression
+		grep -w $i /home/output/$prefix.most_shared.tsv | cut -f 1 | fgrep -wf - /home/output/${prefix}/expression.tsv >> /home/output/tmp/$prefix.chimeric_expression
+		grep -w $i /home/output/$prefix.most_shared.tsv | cut -f 3 | fgrep -wf - /home/output/${prefix}/expression.tsv >> /home/output/tmp/$prefix.host_expression
+		Rscript /app/freddie/scripts/boxplot_alt.R /home/output/tmp/$prefix.host_expression /home/output/tmp/$prefix.chimeric_expression /home/output/$prefix/figures/$i.svg
 	done
-	rm tmp/$prefix.chimeric_expression
-	rm tmp/$prefix.host_expression
+
+	rm /home/output/tmp/$prefix.chimeric_expression
+	rm /home/output/tmp/$prefix.host_expression
 }
 
 help(){
@@ -311,7 +320,6 @@ help(){
         echo -e "\t-f\tFastq files path"
         echo -e "\t-e\tType experiment"
         echo -e "\t-g\tGTF file"
-        echo -e "\t-G\tReference Genome file"
         echo -e "\t-G\tReference Genome file"
         echo -e "\t-i\tInput path"
         echo -e "\t-y\tFilter type: strict or default"
