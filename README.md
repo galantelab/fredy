@@ -82,8 +82,11 @@ Freddie is a user-friendly pipeline designed to identify, quantify, and analyze 
 Freddie can be obtained from Dockerfile.
 
 `git clone https://github.com/galantelab/freddie.git`
+
 `cd freddie`
+
 `docker build -f Dockerfile -t freddie .`
+
 `alias freddie='docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <reference-files-path>:/home/ref/ -v <input-path>:/home/input/ -v <output-path>:/home/output/ -v <output-tostring-path>:/home/output_str freddie'`
 
 <!-- COMMANDS AND OPTIONS -->
