@@ -1,0 +1,10 @@
+# Ignore everything
+*
+
+# Except the license
+!/LICENSE
+
+# Except the followings:
+!/ann
+!/freddie
+!/scripts
