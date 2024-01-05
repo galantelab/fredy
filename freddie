@@ -24,6 +24,26 @@ TYPE=
 MODEL=
 PROTEIN_DB=
 
+# Auxiliary functions
+
+## Print: date info|error [func]: message
+_template() {
+	local type="$1"; shift
+	local time=$(date '+%Y.%m.%d-%H.%M.%S')
+	echo "$time $type [${FUNCNAME[2]}]: $@" >&2
+}
+
+## Just call _template with type 'info'
+info() {
+	_template 'info' "$@"
+}
+
+## Call _template and die
+error() {
+	_template 'error' "$@"
+	exit 1
+}
+
 string() {
 	## Annotation gencode
 	## Prefix
@@ -37,19 +57,20 @@ string() {
 	elif [ ${EXPERIMENT} = "long" ]; then
 		paramet=" -L -a 3"
 	else
-		echo "Error - ${EXPERIMENT} is not a -e valid parameter"
-		return
+		error "${EXPERIMENT} is not a -e valid parameter"
 	fi
 
 	jobs=$(awk -v threads=$THREADS '{print int(threads/2)}' <(echo "."))
 
-	echo 'Running Stringtie'
+	info 'Running Stringtie'
 	for i in $(cat ${FASTQ}); do
 		echo "stringtie $i.bam $paramet -G $GTF -p 2 -o /home/output_str/${PREFIX}/${i/*\/}.gtf"
 	done | parallel -j $jobs
 
-	echo 'Joining gtfs'
+	info 'Joining gtfs'
 	stringtie --merge -p $THREADS -G $GTF -o /home/output/$PREFIX.merge.gtf /home/output_str/${PREFIX}/*.gtf
+
+	info "Done"
 }
 
 chimeric() {
@@ -57,7 +78,7 @@ chimeric() {
 	## Prefix and RTC list (Input)
 	## freddie chimeric -p K562_short -i input/rtc.bed -g <gtf-path> -G <genome-path> -y default
 
-	echo 'Finding new transcripts'
+	info 'Finding new transcripts'
 	mkdir /home/output/tmp/ 2> /dev/null
 
 	#Dicionário de protein codings
@@ -73,7 +94,7 @@ chimeric() {
 		> /home/output/tmp/$PREFIX.tmp
 
 	#Lista dos transcritos novos que tem RTC
-	echo 'Finding chimeric transcripts'
+	info 'Finding chimeric transcripts'
 	if [ ${TYPE} = "strict" ]; then
 		bedtools intersect -r -f 0.5 -wo -a $INPUT -b /home/output/tmp/$PREFIX.tmp | cut -f 4,8 \
 			| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' | sed 's/"\|;//g' \
@@ -89,8 +110,7 @@ chimeric() {
 		| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
 		> /home/output/$PREFIX.chimeric.txt
 	else
-		echo "Error - ${TYPE} is not a valid parameter"
-		return
+		error "${TYPE} is not a valid parameter"
 	fi
 
 	#Montando um gtf dos transcritos novos anotados pelo stringtie
@@ -145,6 +165,8 @@ chimeric() {
 	rm /home/output/tmp/*${PREFIX}*.tmp
 	rm /home/output/tmp/*${PREFIX}*
 	rm /home/output/$PREFIX.protein.gtf
+
+	info "Done"
 }
 
 coding() {
@@ -153,7 +175,7 @@ coding() {
 	## freddie coding -p K562_short -m <name-to-rnasambamodel> -d <path-to-proteinseq>
 
 	#Rodar o RNASamba
-	echo "Running RNASamba"
+	info "Running RNASamba"
 
 	rnasamba classify \
 		-p /home/output/$PREFIX.predicted_proteins.fa /home/output/$PREFIX.classification.tsv /home/output/$PREFIX.chimeric.fasta $MODEL
@@ -162,8 +184,7 @@ coding() {
 	#mv ann/$PREFIX.* output/
 
 	#Selecionando somente os transcritos dos protein_coding com protencial codificante
-	echo "Done!"
-	echo "Selecting chimeric transcripts with coding potential"
+	info "Selecting chimeric transcripts with coding potential"
 	awk '{if ($3 >= 0.9) print $1}' /home/output/$PREFIX.classification.tsv \
 		| sed 1d | grep -wf - /home/output/$PREFIX.most_shared.tsv | cut -d . -f 1,2,3 | sort -u \
 		| awk '{print $2"\t"$1}' | cut -d . -f 1,2 |  awk '{print $2"\t"$1}' \
@@ -175,10 +196,12 @@ coding() {
 	#Selecionando a sequencia de AA dos respectivos.
 	seqtk subseq /home/output/$PREFIX.predicted_proteins.fa /home/output/tmp/$PREFIX.transcript.txt > /home/output/$PREFIX.novel_proteins.fa
 	seqtk subseq $PROTEIN_DB <(cut -f 2 /home/output/tmp/$PREFIX.coding.txt) > /home/output/$PREFIX.ann_proteins.fa
+
+	info "Done"
 }
 
 pfam() {
-	echo "Running PFAM..."
+	info "Running PFAM..."
 	cat /home/output/$PREFIX.novel_proteins.fa /home/output/$PREFIX.ann_proteins.fa > /home/output/tmp/pfam.$PREFIX.tmp
 
 	if ! [ -f /home/ref/Pfam-A.hmm ]; then
@@ -189,9 +212,7 @@ pfam() {
 
 	hmmsearch --tblout /home/output/tmp/pfam.hmm.$PREFIX -E 1e-6 --cpu 4 /home/ref/Pfam-A.hmm /home/output/tmp/pfam.$PREFIX.tmp > /home/output/tmp/log 2> /home/output/tmp/log.err
 
-	echo "Done"
-
-	echo "Comparing chimeric domains with host domains"
+	info "Comparing chimeric domains with host domains"
 	sed -i "s/\ gene=/\t/g" /home/output/tmp/$PREFIX.transcript.txt
 	join -1 2 -2 1 <(sort -k2,2 /home/output/tmp/$PREFIX.transcript.txt) <(sort -k1,1 /home/output/tmp/$PREFIX.coding.txt)| sed 's/ /\t/g' \
 		> /home/output/tmp/$PREFIX.join.txt
@@ -208,12 +229,13 @@ pfam() {
 	done
 
 	cat /home/output/tmp/$PREFIX.*.pfamf.tsv > /home/output/$PREFIX.info_dom.tsv
-	echo "Done"
 
 	rm /home/output/tmp/$PREFIX*
 	rm /home/output/tmp/*$PREFIX*
 	rm /home/output/tmp/$PREFIX.coding.txt
 	rm /home/output/tmp/$PREFIX.transcript.txt
+
+	info "Done"
 }
 
 expression() {
@@ -228,21 +250,18 @@ expression() {
 	elif [ ${EXPERIMENT} = "long" ]; then
 		paramet="-e -L"
 	else
-		echo "Error - ${EXPERIMENT} is not a -e valid parameter"
-		return
+		error "${EXPERIMENT} is not a -e valid parameter"
 	fi
 
 	jobs=$(awk -v threads=$THREADS '{print int(threads/2)}' <(echo "."))
 	mkdir /home/output/$PREFIX 2> /dev/null
 
-	echo "Performing expression"
+	info "Performing expression"
 	for i in $(cat ${FASTQ}); do
 		echo "stringtie $i.bam $paramet -G /home/output/$PREFIX.merge.gtf -p 2 -o /home/output/$PREFIX/${i/*\/}_exp.gtf"
 	done | parallel -j $jobs
 
-	echo "Done!"
-
-	echo 'Merging samples ...'
+	info 'Merging samples ...'
 	jobs=$(awk -v threads=$THREADS '{print int(threads/2)}' <(echo "."))
 	for i in $(cat ${FASTQ}); do
 		echo "awk -v OFS='\t' '{if (\$12 ~/ENST/ && \$3 == \"transcript\") print \$10,\$12,\$20; \
@@ -259,25 +278,26 @@ expression() {
 	end=$((3*$(ls /home/output/${PREFIX}/*_exp.tsv | wc -l)))
 	paste /home/output/${PREFIX}/*_exp.tsv | cut -f$(seq -s, 3 3 $end) > /home/output/tmp/$PREFIX.expression.tsv
 	cat /home/output/tmp/$PREFIX.header.tsv <(paste /home/output/tmp/$PREFIX.transcript_id.tsv /home/output/tmp/$PREFIX.expression.tsv) > /home/output/${PREFIX}/expression.tsv
-	echo 'Done'
+
+	info "Done"
 }
 
 results() {
 	> /home/output/tmp/${PREFIX}.nsamplespertranscript.tsv
 
-	echo "Step1"
+	info "Step1"
 	for i in $(cut -f 1 /home/output/$PREFIX.most_shared.tsv | sort -u); do
 		n_samples=$(grep -w $i /home/output/${PREFIX}/expression.tsv | tr -t '\t' '\n' | awk '{if ($1 > 0) print}' | grep -v MSTRG | wc -l)
 		echo -e $i'\t'$n_samples >> /home/output/tmp/${PREFIX}.nsamplespertranscript.tsv
 	done
 
-	echo "Step2"
+	info "Step2"
 	Rscript /app/freddie/scripts/median.R /home/output/${PREFIX}/expression.tsv /home/output/${PREFIX}/median.tsv
 
 	awk -F '.' '{print $0"\t"$1"."$2}' /home/output/$PREFIX.most_shared.tsv > /home/output/tmp/$PREFIX.most_shared.tsv
 
 	#Colocar uma coluna 4 com o id_gene não so o id_trans (MSTRG.X além de MSTRG.X.Y)
-	echo "Step3"
+	info "Step3"
 	> /home/output/tmp/$PREFIX.host_expression
 	> /home/output/tmp/$PREFIX.chimeric_expression
 	> /home/output/tmp/${PREFIX}.psi.tsv
@@ -318,6 +338,8 @@ results() {
 
 	rm /home/output/tmp/$PREFIX.chimeric_expression
 	rm /home/output/tmp/$PREFIX.host_expression
+
+	info "Done"
 }
 
 help() {
@@ -388,8 +410,7 @@ parse_opt() {
 				PROTEIN_DB="$OPTARG"
 				;;
 			?)
-				echo "No such option '-$OPTARG'"
-				exit 1
+				error "No such option '-$OPTARG'"
 				;;
 		esac
 	done
@@ -410,8 +431,7 @@ main() {
 		help)       ;;
 		version)    ;;
 		*)
-			echo "'$cmd' is not a valid command"
-			exit 1
+			error "'$cmd' is not a valid command"
 			;;
 	esac
 
