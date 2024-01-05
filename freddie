@@ -327,7 +327,9 @@ help() {
 	echo ""
 	echo "Where <CMD> can be one of:"
 
-	echo -e "\n\tstring\t\tRun StringTie2"
+	echo -e "\n\thelp\t\tPrint this help"
+	echo -e "\tversion\t\tPrint the current version"
+	echo -e "\tstring\t\tRun StringTie2"
 	echo -e "\tchimeric\tFinding potential chimeric transcripts"
 	echo -e "\tcoding\t\tEstimates the possibility of a chimeric transcript being coding"
 	echo -e "\tpfam\t\tAnalyzes the domains of the sequences generated in relation to the host transcript"
@@ -346,16 +348,14 @@ help() {
 	echo -e "\t-t\tThreads"
 	echo -e "\t-m\tModel RNASamba file"
 	echo -e "\t-d\tDatabase of protein"
-	echo -e "\t-a\tWorkDir"
 }
 
 version() {
 	echo "$VERSION"
 }
 
-# TODO: There is neither 'a|WorkDir' nor 'b'
 parse_opt() {
-	while getopts ":i:p:b:f:t:e:g:G:y:m:d:" OPTION; do
+	while getopts ":i:p:f:t:e:g:G:y:m:d:" OPTION; do
 		case "$OPTION" in
 			i)
 				INPUT="$OPTARG"
