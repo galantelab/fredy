@@ -321,7 +321,7 @@ results() {
 }
 
 help() {
-	echo "freddie 1.0"
+	echo "freddie $VERSION"
 	echo ""
 	echo "Usage: freddie <CMD> [arguments] .."
 	echo ""
