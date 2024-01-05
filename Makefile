@@ -73,7 +73,7 @@ git-check-version:
 .PHONY: git-check-status
 
 git-check-status:
-	@if git status --porcelain > /dev/null; then \
+	@if git status --porcelain | grep -qE '^ *[M?]+'; then \
 		echo The working tree is dirty or has untracked files; \
 		echo Use 'git status' for more details; \
 		false; \
