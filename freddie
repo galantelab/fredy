@@ -10,7 +10,7 @@
 # Global variables
 
 ## Our current version
-readonly VERSION='1.0.0-dev2'
+readonly VERSION='1.0.0-dev3'
 
 ## Our options
 INPUT=
