@@ -1,0 +1,58 @@
+# vim:ft=sh
+
+# Global variables
+
+## Say my name
+PROG_NAME='freddie'
+
+## Our current version
+VERSION='1.0.0-dev3'
+
+# Log functions
+
+## Print: date info|error script [func]: message
+_template() {
+	local type="$1"; shift
+	local time=$(date '+%Y.%m.%d-%H.%M.%S')
+	echo -e "$time $type $PROG_NAME [${FUNCNAME[2]}]: $@" >&2
+}
+
+## Just call _template with type 'info'
+log_info() {
+	_template 'info' "$@"
+}
+
+## Just call _template with type 'info'
+log_warn() {
+	_template 'warn' "$@"
+}
+
+## Call _template and die
+log_error() {
+	_template 'error' "$@"
+	exit 1
+}
+
+# Display functions
+
+## Print message to stderr
+warn() {
+	echo -e "$PROG_NAME: $@" >&2
+}
+
+## Print message to stderr and die
+error() {
+	echo -e "$PROG_NAME: $@" >&2
+	exit 1
+}
+
+# Print to stderr a message and the string
+# Try help 'porg cmd -h'  for more information
+# After that die
+try_help() {
+	if [[ -v CMD_NAME ]]; then
+		echo "Try '$PROG_NAME $CMD_NAME -h' for more information"
+	else
+		echo "Try '$PROG_NAME -h' for more information"
+	fi
+}
