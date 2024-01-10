@@ -101,17 +101,18 @@ done
 # Check for errors in the options
 validate_opt
 
-log_info 'Finding new transcripts'
-mkdir -p $output_dir/tmp/
-
-# Dicionário de protein codings
-
 # O merge.gtf deve ser passado pelo usuário ou
 # ser localizado pelo output_dir e prefix?
 if [[ ! -f "$output_dir/$prefix.merge.gtf" ]]; then
 	error "'$output_dir/$prefix.merge.gtf' not found. Maybe you need to run '$PROG_NAME string' before"
 fi
 
+# MAIN
+
+log_info 'Finding new transcripts'
+mkdir -p $output_dir/tmp/
+
+# Dicionário de protein codings
 awk '{if ($3 == "CDS") print $10}' "$gtf" \
 	| sed 's/;\|"//g' \
 	| cut -d . -f 1 \
