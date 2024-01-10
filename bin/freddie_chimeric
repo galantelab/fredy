@@ -1,0 +1,262 @@
+#!/usr/bin/env bash
+
+## Annotation gencode
+## Prefix and RTC list (Input)
+## freddie chimeric -p K562_short -i input/rtc.bed -g <gtf-path> -G <genome-path> -y default
+
+# Bash pragmas
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Where I am
+BIN_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
+
+# Load common lib
+source "$BIN_DIR/../lib/freddie_common"
+
+# My name
+SCRIPT_NAME="${0##*/}"
+
+# Command name
+CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
+
+usage() {
+	echo "$PROG_NAME $VERSION"
+	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
+	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+}
+
+validate_opt() {
+	if [[ ! "$type" =~ ^(strict|default)$ ]]; then
+		error "'$type' is not a valid '-y' option\n$(try_help)"
+	fi
+
+	# Mandatory options '-g', '-G' and '-i'
+	if [[ -z "$gtf" ]]; then
+		error "Missing '-g' option\n$(try_help)"
+	fi
+
+	if [[ -z "$genome" ]]; then
+		error "Missing '-G' option\n$(try_help)"
+	fi
+
+	if [[ -z "$input" ]]; then
+		error "Missing '-i' option\n$(try_help)"
+	fi
+
+	if [[ ! -f "$gtf" ]]; then
+		error "No such file '$gtf'"
+	fi
+
+	if [[ ! -f "$genome" ]]; then
+		error "No such file '$genome'"
+	fi
+
+	if [[ ! -f "$input" ]]; then
+		error "No such file '$input'"
+	fi
+}
+
+# Options
+prefix="out"
+output_dir="."
+type="default"
+input="" # BED?
+gtf="" # Pode ser gtff?
+genome=""
+
+[[ $# == 0 ]] && { usage; exit; }
+
+while getopts ":ho:p:i:g:G:y:" OPTION; do
+	case "$OPTION" in
+		h)
+			usage
+			exit
+			;;
+		o)
+			output_dir="$OPTARG"
+			;;
+		p)
+			prefix="$OPTARG"
+			;;
+		i)
+			input="$OPTARG"
+			;;
+		g)
+			gtf="$OPTARG"
+			;;
+		G)
+			genome="$OPTARG"
+			;;
+		y)
+			type="$OPTARG"
+			;;
+		?)
+			error "No such option '-$OPTARG'\n$(try_help)"
+			;;
+	esac
+done
+
+# Check for errors in the options
+validate_opt
+
+log_info 'Finding new transcripts'
+mkdir -p $output_dir/tmp/
+
+# Dicionário de protein codings
+
+# O merge.gtf deve ser passado pelo usuário ou
+# ser localizado pelo output_dir e prefix?
+if [[ ! -f "$output_dir/$prefix.merge.gtf" ]]; then
+	error "'$output_dir/$prefix.merge.gtf' not found. Maybe you need to run '$PROG_NAME string' before"
+fi
+
+awk '{if ($3 == "CDS") print $10}' "$gtf" \
+	| sed 's/;\|"//g' \
+	| cut -d . -f 1 \
+	| sort -u \
+	| fgrep -f - "$output_dir/$prefix.merge.gtf" \
+	| awk -F'"' '{print $2}' \
+	| sort -u \
+	| cut -d . -f 1 > "$output_dir/tmp/$prefix.dic.tmp"
+
+#Filtro de transcritos anotados
+fgrep "transcript_id \"MSTRG" "$output_dir/$prefix.merge.gtf" \
+	> "$output_dir/$prefix.novels.gtf"
+
+#Pegando os exons dos novos transcritos
+awk -F "\t" '{if ($3 == "exon" && $1 ~/chr/) print $1"\t"$4"\t"$5"\t"$9}' \
+	"$output_dir/$prefix.novels.gtf" \
+	| sort -k1,1 -k2,2n \
+	> "$output_dir/tmp/$prefix.tmp"
+
+#Lista dos transcritos novos que tem RTC
+log_info 'Finding chimeric transcripts'
+if [[ "$type" == "strict" ]]; then
+	bedtools intersect -r -f 0.5 -wo \
+		-a "$input" \
+		-b "$output_dir/tmp/$prefix.tmp" \
+		| cut -f 4,8 \
+		| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' \
+		| sed 's/"\|;//g' \
+		| sort -u \
+		| awk -v OFS="\t" '{print $1,$2,$2,$3}' \
+		| sort -k1,1 -k2,2n \
+		| bedtools merge -o collapse -i - -c 4 \
+		| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
+		> "$output_dir/$prefix.chimeric.txt"
+else
+	# default
+	bedtools intersect -f 0.5 -wo \
+		-a "$input" \
+		-b "$output_dir/tmp/$prefix.tmp" \
+		| cut -f 4,8 \
+		| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' \
+		| sed 's/"\|;//g' \
+		| sort -u \
+		| awk -v OFS="\t" '{print $1,$2,$2,$3}' \
+		| sort -k1,1 -k2,2n \
+		| bedtools merge -o collapse -i - -c 4 \
+		| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
+		> "$output_dir/$prefix.chimeric.txt"
+fi
+
+#Montando um gtf dos transcritos novos anotados pelo stringtie
+fgrep -w \
+	-f <(cut -f 1 "$output_dir/$prefix.chimeric.txt") \
+	"$output_dir/$prefix.merge.gtf" \
+	> "$output_dir/$prefix.protein.gtf"
+
+#Montando um gtf e um bed com possiveis transcritos quiméricos
+grep -w \
+	-f "$output_dir/tmp/$prefix.dic.tmp" \
+	"$output_dir/$prefix.protein.gtf" \
+	> "$output_dir/tmp/$prefix.chimeric.tmp.gtf"
+
+grep -w exon \
+	"$output_dir/tmp/$prefix.chimeric.tmp.gtf" \
+	| cut -f 1,4,5,9 \
+	> "$output_dir/tmp/$prefix.exon.bed"
+
+#Criando um bed com todos os transcritos ja anotados de protein_coding
+awk '{if ($3 == "CDS") print $12}' "$gtf" \
+	| sed 's/;\|"//g' \
+	| sort -u \
+	| fgrep -wf - "$gtf" \
+	| awk '{if ($3 == "exon") print}' \
+	| cut -f 1,4,5,9 \
+	| bedtools intersect -wo -a "$output_dir/tmp/$prefix.exon.bed" -b - \
+	| cut -f 4,8 \
+	| awk -F '"' '{print $4"\t"$8"\t"$10}' \
+	| sort \
+	| uniq -c \
+	| sort -k2,2 -k1,1r \
+	> "$output_dir/tmp/$prefix.partial.tsv"
+
+> "$output_dir/$prefix.most_shared.tsv"
+fgrep MSTRG "$output_dir/tmp/$prefix.partial.tsv" \
+	| awk -v OFS="\t" '{if ($1 > 1) print $1,$2,$3,$4}' \
+	| sort -k2,2 -k1,1nr \
+	| awk '!D[$2]++' \
+	| awk '{print $1,$2}' \
+	| fgrep -wf - "$output_dir/tmp/$prefix.partial.tsv" \
+	| awk -F" " '{print $2"\t"$3"\t"$4}' \
+	> "$output_dir/$prefix.most_shared.tsv"
+
+fgrep -w \
+	-f <(cut -f 1 "$output_dir/$prefix.most_shared.tsv" | sort -u) \
+	"$output_dir/$prefix.protein.gtf" \
+	> "$output_dir/tmp/$prefix.chimeric.gtf"
+
+#Classificando internal initial e final
+python3 "$BIN_DIR/../scripts/bed_novel.py" \
+	"$output_dir/tmp/$prefix.chimeric.gtf" \
+	> "$output_dir/tmp/$prefix.info.tmp"
+
+sed 's/\\//g' "$output_dir/$prefix.chimeric.txt" \
+	> "$output_dir/tmp/$prefix.joined.txt"
+
+join \
+	<(sort -k1,1 -k2,2n "$output_dir/tmp/$prefix.info.tmp") \
+	<(sort -k1,1 -k2,2n "$output_dir/tmp/$prefix.joined.txt") \
+	| awk -F " " '{if ($3 == $4 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
+		else if ($3 == $4 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
+		else if ($4 == 1 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
+		else if ($4 == 1 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
+		else print $1"\t"$2"\t"$3"\t"$4"\tNovel Internal"}' \
+	> "$output_dir/tmp/$prefix.info.tsv"
+
+grep -v \
+	-f <(cut -f 1 "$output_dir/tmp/$prefix.info.tsv" \
+	| uniq -c \
+	| awk '{if ($1 > 1) print $2}') "$output_dir/tmp/$prefix.info.tsv" \
+	> "$output_dir/$prefix.info.tsv"
+
+grep \
+	-f <(cut -f 1,4 "$output_dir/tmp/$prefix.info.tsv" \
+	| uniq -c \
+	| awk '{if ($1 > 1) print $2}') "$output_dir/tmp/$prefix.info.tsv" \
+	>> "$output_dir/$prefix.info.tsv"
+
+cut -f 1 "$output_dir/$prefix.info.tsv" \
+	| fgrep -wf - "$output_dir/tmp/$prefix.chimeric.gtf" \
+	| awk -F \" '{print $4"\t"$0}' \
+	| sort -k1,1 -k4,4r \
+	| join - <(sort -k1,1 "$output_dir/$prefix.chimeric.txt") \
+	| awk -v OFS="\t" -F ' ' '{if ($4 == "transcript") print $2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" chimeric_event \""$15"\"; chimeric_exon_number \""$14"\";"; \
+		else print$2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" "$14" "$15}' \
+	> "$output_dir/$prefix.chimeric.gtf"
+
+#Arquivo fasta dos possiveis transcritos quimericos do stringtie
+gffread "$output_dir/$prefix.chimeric.gtf" \
+	-g "$genome" \
+	-w "$output_dir/$prefix.chimeric.fasta"
+
+rm "$output_dir/$prefix.novels.gtf"
+rm "$output_dir/$prefix.chimeric.txt"
+rm "$output_dir/tmp"/*${prefix}*.tmp
+rm "$output_dir/tmp"/*${prefix}* ## redundante?
+rm "$output_dir/$prefix.protein.gtf"
+
+log_info "Done"
