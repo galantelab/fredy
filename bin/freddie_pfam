@@ -24,7 +24,7 @@ usage() {
 }
 
 validate_opt() {
-	# Mandatory options '-m' and '-d'
+	# Mandatory option 'M'
 	if [[ -z "$pfam_model" ]]; then
 		error "Missing '-M' option\n$(try_help)"
 	fi
@@ -72,6 +72,7 @@ while getopts ":ho:p:M:" OPTION; do
 	esac
 done
 
+# Check for errors
 validate_opt
 validate_dep
 

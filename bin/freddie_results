@@ -77,6 +77,7 @@ while getopts ":ho:p:" OPTION; do
 	esac
 done
 
+# Check for errors
 #validate_opt
 validate_dep
 

@@ -46,6 +46,14 @@ validate_opt() {
 	fi
 }
 
+validate_dep() {
+	# O chimeric.fasta deve ser passado pelo usuário ou
+	# ser localizado pelo output_dir e prefix?
+	if [[ ! -f "$output_dir/$prefix.chimeric.fasta" ]]; then
+		error "'$output_dir/$prefix.chimeric.fasta' not found. Maybe you need to run '$PROG_NAME chimeric' before"
+	fi
+}
+
 # Options
 prefix="out"
 output_dir="."
@@ -78,16 +86,14 @@ while getopts ":ho:p:m:d:" OPTION; do
 	esac
 done
 
-# Check for errors in the options
+# Check for errors
 validate_opt
-
-# O chimeric.fasta deve ser passado pelo usuário ou
-# ser localizado pelo output_dir e prefix?
-if [[ ! -f "$output_dir/$prefix.chimeric.fasta" ]]; then
-	error "'$output_dir/$prefix.chimeric.fasta' not found. Maybe you need to run '$PROG_NAME chimeric' before"
-fi
+validate_dep
 
 # MAIN
+
+# Just in case
+mkdir -p "$output_dir/tmp"
 
 #Rodar o RNASamba
 log_info "Running RNASamba"

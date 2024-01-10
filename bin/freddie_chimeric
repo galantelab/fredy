@@ -58,6 +58,14 @@ validate_opt() {
 	fi
 }
 
+validate_dep() {
+	# O merge.gtf deve ser passado pelo usuário ou
+	# ser localizado pelo output_dir e prefix?
+	if [[ ! -f "$output_dir/$prefix.merge.gtf" ]]; then
+		error "'$output_dir/$prefix.merge.gtf' not found. Maybe you need to run '$PROG_NAME string' before"
+	fi
+}
+
 # Options
 prefix="out"
 output_dir="."
@@ -98,14 +106,9 @@ while getopts ":ho:p:i:g:G:y:" OPTION; do
 	esac
 done
 
-# Check for errors in the options
+# Check for errors
 validate_opt
-
-# O merge.gtf deve ser passado pelo usuário ou
-# ser localizado pelo output_dir e prefix?
-if [[ ! -f "$output_dir/$prefix.merge.gtf" ]]; then
-	error "'$output_dir/$prefix.merge.gtf' not found. Maybe you need to run '$PROG_NAME string' before"
-fi
+validate_dep
 
 # MAIN
 

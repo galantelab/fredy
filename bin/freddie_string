@@ -57,6 +57,10 @@ validate_opt() {
 	fi
 }
 
+validate_dep() {
+	echo "Validate dependencies from prev cmd"
+}
+
 # Options
 prefix="out"
 output_dir="."
@@ -101,8 +105,9 @@ while getopts ":ho:p:t:e:g:f:" OPTION; do
 	esac
 done
 
-# Check for errors in the options
+# Check for errors
 validate_opt
+#validate_dep
 
 # MAIN
 
