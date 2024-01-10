@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+
+# Bash pragmas
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Where I am
+BIN_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
+
+# Load common lib
+source "$BIN_DIR/../lib/freddie_common"
+
+# My name
+SCRIPT_NAME="${0##*/}"
+
+# Command name
+CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
+
+usage() {
+	echo "$PROG_NAME $VERSION"
+	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
+	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+}
+
+validate_opt() {
+	echo "Validate options"
+}
+
+validate_dep() {
+	# chimeric
+	if [[ ! -f "$output_dir/$prefix.most_shared.tsv" ]]; then
+		error "'$output_dir/$prefix.most_shared.tsv' not found. Maybe you need to run '$PROG_NAME chimeric' before"
+	fi
+
+	if [[ ! -f "$output_dir/$prefix.info.tsv" ]]; then
+		error "'$output_dir/$prefix.info.tsv' not found. Maybe you need to run '$PROG_NAME chimeric' before"
+	fi
+
+	# coding
+	if [[ ! -f "$output_dir/$prefix.classification.tsv" ]]; then
+		error "'$output_dir/$prefix.classification.tsv' not found. Maybe you need to run '$PROG_NAME coding' before"
+	fi
+
+	# pfam
+	if [[ ! -f "$output_dir/$prefix.info_dom.tsv" ]]; then
+		error "'$output_dir/$prefix.info_dom.tsv' not found. Maybe you need to run '$PROG_NAME pfam' before"
+	fi
+
+	# expression
+	if [[ ! -f "$output_dir/$prefix/expression.tsv" ]]; then
+		error "'$output_dir/$prefix/expression.tsv' not found. Maybe you need to run '$PROG_NAME expression' before"
+	fi
+}
+
+# Options
+prefix="out"
+output_dir="."
+
+[[ $# == 0 ]] && { usage; exit; }
+
+while getopts ":ho:p:" OPTION; do
+	case "$OPTION" in
+		h)
+			usage
+			exit
+			;;
+		o)
+			output_dir="$OPTARG"
+			;;
+		p)
+			prefix="$OPTARG"
+			;;
+		?)
+			error "No such option '-$OPTARG'\n$(try_help)"
+			;;
+	esac
+done
+
+#validate_opt
+validate_dep
+
+# MAIN
+
+# Just in case
+mkdir -p "$output_dir/tmp"
+
+> "$output_dir/tmp/$prefix.nsamplespertranscript.tsv"
+
+log_info "Step1"
+for i in $(cut -f 1 "$output_dir/$prefix.most_shared.tsv" | sort -u); do
+	n_samples=$(grep -w "$i" "$output_dir/$prefix/expression.tsv" \
+		| tr -t '\t' '\n' \
+		| awk '{if ($1 > 0) print}' \
+		| grep -v MSTRG \
+		| wc -l)
+	echo -e $i'\t'$n_samples >> "$output_dir/tmp/$prefix.nsamplespertranscript.tsv"
+done
+
+log_info "Step2"
+Rscript "$BIN_DIR/../scripts/median.R" \
+	"$output_dir/$prefix/expression.tsv" \
+	"$output_dir/$prefix/median.tsv"
+
+awk -F '.' '{print $0"\t"$1"."$2}' \
+	"$output_dir/$prefix.most_shared.tsv" \
+	> "$output_dir/tmp/$prefix.most_shared.tsv"
+
+#Colocar uma coluna 4 com o id_gene não so o id_trans (MSTRG.X além de MSTRG.X.Y)
+log_info "Step3"
+> "$output_dir/tmp/$prefix.host_expression"
+> "$output_dir/tmp/$prefix.chimeric_expression"
+> "$output_dir/tmp/$prefix.psi.tsv"
+
+for i in $(cut -f 4 "$output_dir/tmp/$prefix.most_shared.tsv" | sort -u); do
+	head -n1 \
+		"$output_dir/$prefix/expression.tsv" \
+		> "$output_dir/tmp/$prefix.chimeric_expression"
+
+	head -n1 \
+		"$output_dir/$prefix/expression.tsv" \
+		> "$output_dir/tmp/$prefix.host_expression"
+
+	grep -w "$i" \
+		"$output_dir/tmp/$prefix.most_shared.tsv" \
+		| cut -f 1 \
+		| fgrep -wf - "$output_dir/$prefix/expression.tsv" \
+		>> "$output_dir/tmp/$prefix.chimeric_expression"
+
+	grep -w "$i" "$output_dir/tmp/$prefix.most_shared.tsv" \
+		| cut -f 2 \
+		| fgrep -wf - "$output_dir/${prefix}.merge.gtf" \
+		| fgrep -v exon \
+		| awk -F '"' '{print $4}' \
+		| fgrep -wf - "$output_dir/$prefix/expression.tsv" \
+		>> "$output_dir/tmp/$prefix.host_expression"
+
+	Rscript "$BIN_DIR/../scripts/psi.R" \
+		"$output_dir/tmp/$prefix.host_expression" \
+		"$output_dir/tmp/$prefix.chimeric_expression" \
+		"$i" \
+		>> "$output_dir/tmp/$prefix.psi.tsv"
+done
+
+rm "$output_dir/tmp/$prefix.chimeric_expression"
+rm "$output_dir/tmp/$prefix.host_expression"
+
+echo -e 'Id\tGene\tTranscript\tEvent_in\tSamples\tExpression_Median\tPsi\tCoding(?)\tObs' \
+	> "$output_dir/$prefix.results"
+
+join \
+	<(sort -k1,1 "$output_dir/tmp/$prefix.most_shared.tsv") \
+	<(sort -k1,1 "$output_dir/$prefix.info.tsv" | cut -f 1,5) \
+	| sed 's/Novel //g' \
+	| join \
+		- \
+		<(sort -k1,1 "$output_dir/tmp/$prefix.nsamplespertranscript.tsv") \
+	| join \
+		- \
+		<(sed 's/"//g' "$output_dir/$prefix/median.tsv" | sort -k1,1) \
+	| sort -k4,4 \
+	| join -1 4 -2 1 \
+		- \
+		<(sort "$output_dir/tmp/$prefix.psi.tsv") \
+	| sort -k2,2 \
+	| join -1 2 -2 1 \
+		- \
+		<(sort "$output_dir/$prefix.classification.tsv" | sort -k1,1 | awk '{if ($3 > 0.9) print $1"\tCoding"; else print $1"\tNon-Coding"}') \
+	| join -a 1 \
+		- \
+		<(sort "$output_dir/$prefix.info_dom.tsv" | cut -f 1,5 | sed 's/\ /espaco/g' | sort -k1,1) \
+	| awk '{$2=""; print $0}' - \
+	| sed 's/\ /\t/g' \
+	| sed 's/espaco/\ /g' \
+	>> "$output_dir/$prefix.results"
+
+
+mkdir -p "$output_dir/$prefix/figures"
+
+for i in $(awk '{if ($2 >= 0.15) print $1}' "$output_dir/tmp/$prefix.psi.tsv" | sort -u) ; do
+	head -n1 "$output_dir/$prefix/expression.tsv" \
+		> "$output_dir/tmp/$prefix.chimeric_expression"
+
+	head -n1 "$output_dir/$prefix/expression.tsv" \
+		> "$output_dir/tmp/$prefix.host_expression"
+
+	grep -w "$i" \
+		"$output_dir/$prefix.most_shared.tsv" \
+		| cut -f 1 \
+		| fgrep -wf - "$output_dir/$prefix/expression.tsv" \
+		>> "$output_dir/tmp/$prefix.chimeric_expression"
+
+	grep -w "$i" \
+		"$output_dir/$prefix.most_shared.tsv" \
+		| cut -f 3 \
+		| fgrep -wf - "$output_dir/$prefix/expression.tsv" \
+		>> "$output_dir/tmp/$prefix.host_expression"
+
+	Rscript "$BIN_DIR/../scripts/boxplot_alt.R" \
+		"$output_dir/tmp/$prefix.host_expression" \
+		"$output_dir/tmp/$prefix.chimeric_expression" \
+		"$output_dir/$prefix/figures/$i.svg"
+done
+
+rm "$output_dir/tmp/$prefix.chimeric_expression"
+rm "$output_dir/tmp/$prefix.host_expression"
+
+log_info "Done"
