@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+
+# Bash pragmas
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Where I am
+BIN_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
+
+# Load common lib
+source "$BIN_DIR/../lib/freddie_common"
+
+# My name
+SCRIPT_NAME="${0##*/}"
+
+# Command name
+CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
+
+usage() {
+	echo "$PROG_NAME $VERSION"
+	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
+	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+}
+
+validate_opt() {
+	# Mandatory options '-m' and '-d'
+	if [[ -z "$pfam_model" ]]; then
+		error "Missing '-M' option\n$(try_help)"
+	fi
+
+	if [[ ! -f "$pfam_model" ]]; then
+		error "No such file '$pfam_model'"
+	fi
+}
+
+validate_dep() {
+	if [[ ! -f "$output_dir/$prefix.novel_proteins.fa" ]]; then
+		error "'$output_dir/$prefix.novel_proteins.fa' not found. Maybe you need to run '$PROG_NAME coding' before"
+	fi
+
+	if [[ ! -f "$output_dir/$prefix.ann_proteins.fa" ]]; then
+		error "'$output_dir/$prefix.ann_proteins.fa' not found. Maybe you need to run '$PROG_NAME coding' before"
+	fi
+}
+
+# Options
+prefix="out"
+output_dir="."
+pfam_model=""
+
+[[ $# == 0 ]] && { usage; exit; }
+
+while getopts ":ho:p:M:" OPTION; do
+	case "$OPTION" in
+		h)
+			usage
+			exit
+			;;
+		o)
+			output_dir="$OPTARG"
+			;;
+		p)
+			prefix="$OPTARG"
+			;;
+		M)
+			pfam_model="$OPTARG"
+			;;
+		?)
+			error "No such option '-$OPTARG'\n$(try_help)"
+			;;
+	esac
+done
+
+validate_opt
+validate_dep
+
+# MAIN
+
+# Just in case
+mkdir -p "$output_dir/tmp"
+
+log_info "Running PFAM..."
+cat \
+	"$output_dir/$prefix.novel_proteins.fa" \
+	"$output_dir/$prefix.ann_proteins.fa" \
+	> "$output_dir/tmp/pfam.$prefix.tmp"
+
+# O usuário que passe o modelo?
+#if ! [ -f /home/ref/Pfam-A.hmm ]; then
+#	wget --directory-prefix=/home/ref/ ftp://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam31.0/Pfam-A.hmm.gz
+#	gunzip /home/ref/Pfam-A.hmm.gz
+#	hmmpress /home/ref/Pfam-A.hmm
+#fi
+
+hmmsearch \
+	--tblout "$output_dir/tmp/pfam.hmm.$prefix" \
+	-E 1e-6 \
+	--cpu 4 \
+	"$pfam_model" \
+	"$output_dir/tmp/pfam.$prefix.tmp" \
+	> "$output_dir/tmp/log" 2> "$output_dir/tmp/log.err"
+
+log_info "Comparing chimeric domains with host domains"
+sed -i "s/\ gene=/\t/g" "$output_dir/tmp/$prefix.transcript.txt"
+
+join -1 2 -2 1 \
+	<(sort -k2,2 "$output_dir/tmp/$prefix.transcript.txt") \
+	<(sort -k1,1 "$output_dir/tmp/$prefix.coding.txt") \
+	| sed 's/ /\t/g' \
+	> "$output_dir/tmp/$prefix.join.txt"
+
+while read gene trans host; do
+	grep -w "$trans" \
+		"$output_dir/tmp/pfam.hmm.$prefix" \
+		> "$output_dir/tmp/$prefix.$trans.$host.txt"
+
+	grep -w "$host" \
+		"$output_dir/tmp/pfam.hmm.$prefix" \
+		>> "$output_dir/tmp/$prefix.$trans.$host.txt"
+
+	grep -v \# "$output_dir/tmp/$prefix.$trans.$host.txt" \
+		| awk -F" " '{print $1,$3,$6,$4}' \
+		> "$output_dir/tmp/$prefix.pfam.tmp"
+
+	python3 "$BIN_DIR/../scripts/comp_dom.py" \
+		"$output_dir/tmp/$prefix.pfam.tmp" \
+		"$trans" \
+		> "$output_dir/tmp/$prefix.$trans.$host.pfam.tsv"
+done < "$output_dir/tmp/$prefix.join.txt"
+
+for i in $(cut -f 2 "$output_dir/tmp/$prefix.transcript.txt"); do
+	cat "$output_dir/tmp/$prefix.$i".*.pfam.tsv \
+		| grep -v \# \
+		> "$output_dir/tmp/$prefix.$i.pfamf.tsv"
+done
+
+cat "$output_dir/tmp/$prefix".*.pfamf.tsv \
+	> "$output_dir/$prefix.info_dom.tsv"
+
+rm "$output_dir/tmp"/$prefix*
+rm "$output_dir/tmp"/*$prefix*
+rm "$output_dir/tmp/$prefix.coding.txt"
+rm "$output_dir/tmp/$prefix.transcript.txt"
+
+log_info "Done"
