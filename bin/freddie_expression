@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+
+## freddie expression -p K562_short -f fastq.txt -t 12 -e short
+
+# Bash pragmas
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Where I am
+BIN_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
+
+# Load common lib
+source "$BIN_DIR/../lib/freddie_common"
+
+# My name
+SCRIPT_NAME="${0##*/}"
+
+# Command name
+CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
+
+usage() {
+	echo "$PROG_NAME $VERSION"
+	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
+	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+}
+
+validate_opt() {
+	if [[ ! "$experiment" =~ ^(short|long)$ ]]; then
+		error "'$experiment' is not a valid '-e' option\n$(try_help)"
+	fi
+
+	if [[ ! "$threads" =~ ^[0-9]+$ ]] || [[ "$threads" -lt 1 ]]; then
+		error "'$threads' is not a valid '-t' option\n$(try_help)"
+	fi
+
+	# Mandatory options '-f'
+	if [[ -z "$fastq" ]]; then
+		error "Missing '-f' option\n$(try_help)"
+	fi
+
+	if [[ ! -f "$fastq" ]]; then
+		error "No such file '$fastq'"
+	fi
+}
+
+validate_dep() {
+	if [[ ! -f "$output_dir/$prefix.merge.gtf" ]]; then
+		error "'$output_dir/$prefix.merge.gtf' not found. Maybe you need to run '$PROG_NAME string' before"
+	fi
+}
+
+# Options
+prefix="out"
+output_dir="."
+threads=1
+experiment="short"
+fastq="" # Os BAMS estão em fastq?
+
+# Processed options
+paramet="-e" # for 'short'
+jobs=1
+arq=""
+end=
+
+[[ $# == 0 ]] && { usage; exit; }
+
+while getopts ":ho:p:f:t:e:" OPTION; do
+	case "$OPTION" in
+		h)
+			usage
+			exit
+			;;
+		o)
+			output_dir="$OPTARG"
+			;;
+		p)
+			prefix="$OPTARG"
+			;;
+		f)
+			fastq="$OPTARG"
+			;;
+		t)
+			threads="$OPTARG"
+			;;
+		e)
+			experiment="$OPTARG"
+			;;
+		?)
+			error "No such option '-$OPTARG'\n$(try_help)"
+			;;
+	esac
+done
+
+validate_opt
+validate_dep
+
+# MAIN
+
+if [[ "$experiment" == "long" ]]; then
+	paramet+=" -L"
+fi
+
+# Se jobs == 1, a divisão dará 0?
+jobs=$(awk -v threads=$threads '{print int(threads/2)}' <(echo "."))
+
+# Em vez de criar umas pasta nova, usar o $prefix como
+# o prefix dos novos arquivos na pasta $output_dir
+mkdir -p "$output_dir/$prefix"
+
+log_info "Performing expression"
+for i in $(cat "$fastq"); do
+	echo "stringtie $i.bam $paramet -G $output_dir/$prefix.merge.gtf -p 2 -o $output_dir/$prefix/${i/*\/}_exp.gtf"
+done | parallel -j $jobs
+
+log_info 'Merging samples ...'
+for i in $(cat "$fastq"); do
+	echo "awk -v OFS='\t' '{if (\$12 ~/ENST/ && \$3 == \"transcript\") print \$10,\$12,\$20; else if (\$12 ~/MSTRG/ && \$3 == \"transcript\") print \$10,\$12,\$18}' $output_dir/$prefix/${i/*\/}_exp.gtf | sed 's/;//g' | sed 's/\"//g' | sort -k1,1 > $output_dir/$prefix/${i/*\/}_exp.tsv"
+done | parallel -j $jobs
+
+paste \
+	<(echo 'transcript_id') \
+	<(cat "$fastq" | awk -F'/' '{print $NF}' \
+	| tr -t '\n' '\t' \
+	| sed 's/\t$//1') \
+	> "$output_dir/tmp/$prefix.header.tsv"
+
+# Ele pega o primeiro da expansão do wildcard?
+arq=$(ls "$output_dir/$prefix"/*_exp.tsv | head -n1)
+cut -f 2 "$arq" > "$output_dir/tmp/$prefix.transcript_id.tsv"
+
+end=$(( 3 * $(ls "$output_dir/$prefix"/*_exp.tsv | wc -l) ))
+paste "$output_dir/$prefix"/*_exp.tsv \
+	| cut -f $(seq -s, 3 3 $end) \
+	> "$output_dir/tmp/$prefix.expression.tsv"
+
+cat \
+	"$output_dir/tmp/$prefix.header.tsv" \
+	<(paste "$output_dir/tmp/$prefix.transcript_id.tsv" "$output_dir/tmp/$prefix.expression.tsv") \
+	> "$output_dir/$prefix/expression.tsv"
+
+log_info "Done"
