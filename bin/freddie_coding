@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+## Annotation gencode
+## Prefix
+## freddie coding -p K562_short -m <name-to-rnasambamodel> -d <path-to-proteinseq>
+
+# Bash pragmas
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Where I am
+BIN_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
+
+# Load common lib
+source "$BIN_DIR/../lib/freddie_common"
+
+# My name
+SCRIPT_NAME="${0##*/}"
+
+# Command name
+CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
+
+usage() {
+	echo "$PROG_NAME $VERSION"
+	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
+	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+}
+
+validate_opt() {
+	# Mandatory options '-m' and '-d'
+	if [[ -z "$model" ]]; then
+		error "Missing '-m' option\n$(try_help)"
+	fi
+
+	if [[ -z "$protein_db" ]]; then
+		error "Missing '-d' option\n$(try_help)"
+	fi
+
+	if [[ ! -f "$model" ]]; then
+		error "No such file '$model'"
+	fi
+
+	if [[ ! -f "$protein_db" ]]; then
+		error "No such file '$protein_db'"
+	fi
+}
+
+# Options
+prefix="out"
+output_dir="."
+model=""
+protein_db=""
+
+[[ $# == 0 ]] && { usage; exit; }
+
+while getopts ":ho:p:m:d:" OPTION; do
+	case "$OPTION" in
+		h)
+			usage
+			exit
+			;;
+		o)
+			output_dir="$OPTARG"
+			;;
+		p)
+			prefix="$OPTARG"
+			;;
+		m)
+			model="$OPTARG"
+			;;
+		d)
+			protein_db="$OPTARG"
+			;;
+		?)
+			error "No such option '-$OPTARG'\n$(try_help)"
+			;;
+	esac
+done
+
+# Check for errors in the options
+validate_opt
+
+# O chimeric.fasta deve ser passado pelo usuário ou
+# ser localizado pelo output_dir e prefix?
+if [[ ! -f "$output_dir/$prefix.chimeric.fasta" ]]; then
+	error "'$output_dir/$prefix.chimeric.fasta' not found. Maybe you need to run '$PROG_NAME chimeric' before"
+fi
+
+# MAIN
+
+#Rodar o RNASamba
+log_info "Running RNASamba"
+
+rnasamba classify \
+	-p "$output_dir/$prefix.predicted_proteins.fa" \
+	"$output_dir/$prefix.classification.tsv" \
+	"$output_dir/$prefix.chimeric.fasta" \
+	"$model"
+
+#Movendo os resultados do RNASamba para o output
+#mv ann/$prefix.* output/
+
+#Selecionando somente os transcritos dos protein_coding com protencial codificante
+log_info "Selecting chimeric transcripts with coding potential"
+awk '{if ($3 >= 0.9) print $1}' "$output_dir/$prefix.classification.tsv" \
+	| sed 1d | grep -wf - "$output_dir/$prefix.most_shared.tsv" \
+	| cut -d . -f 1,2,3 \
+	| sort -u \
+	| awk '{print $2"\t"$1}' \
+	| cut -d . -f 1,2 \
+	|  awk '{print $2"\t"$1}' \
+	> "$output_dir/tmp/$prefix.coding.txt"
+
+awk '{if ($3 >= 0.9) print $1}' "$output_dir/$prefix.classification.tsv" \
+	| sed 1d \
+	| awk -F'.' '{print $1"."$2"."$3" gene="$1"."$2}' \
+	> "$output_dir/tmp/$prefix.transcript.txt"
+
+#Selecionando a sequencia de AA dos respectivos.
+seqtk subseq \
+	"$output_dir/$prefix.predicted_proteins.fa" \
+	"$output_dir/tmp/$prefix.transcript.txt" \
+	> "$output_dir/$prefix.novel_proteins.fa"
+
+seqtk subseq \
+	"$protein_db" \
+	<(cut -f 2 "$output_dir/tmp/$prefix.coding.txt") \
+	> "$output_dir/$prefix.ann_proteins.fa"
+
+log_info "Done"
