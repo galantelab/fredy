@@ -1,424 +1,63 @@
 #!/usr/bin/env bash
 
-#####   NOME:            freddie
-#####   DESCRIÇÃO:       Identifica e quantifica transcritos quiméricos e caracteriza seus dominios proteícos (1ª Versão).
-#####   DATA DA CRIAÇÃO: 19/07/2020
-#####   ESCRITO POR:     Rafael L. V. Mercuri
-#####   E-MAIL:          rmercuri@mochsl.org.br
-#####	Dependências: Stringtie2, gffread, python3, Hammer, kallisto, R(ggplot2 e reshape2) e seqtk
-
-# Global variables
-
-## Our current version
-readonly VERSION='1.0.0-dev3'
-
-## Our options
-INPUT=
-PREFIX=
-FASTQ=
-THREADS=
-EXPERIMENT=
-GTF=
-GENOME=
-TYPE=
-MODEL=
-PROTEIN_DB=
-
-# Auxiliary functions
-
-## Print: date info|error [func]: message
-_template() {
-	local type="$1"; shift
-	local time=$(date '+%Y.%m.%d-%H.%M.%S')
-	echo "$time $type [${FUNCNAME[2]}]: $@" >&2
-}
-
-## Just call _template with type 'info'
-info() {
-	_template 'info' "$@"
-}
-
-## Call _template and die
-error() {
-	_template 'error' "$@"
-	exit 1
-}
-
-string() {
-	## Annotation gencode
-	## Prefix
-	## Bams files
-	## freddie string -p K562_short -f files.txt -t 8 -e long -g <gtf/path>
-	local paramet
-	local jobs
-
-	if [ ${EXPERIMENT} = "short" ]; then
-		paramet=" "
-	elif [ ${EXPERIMENT} = "long" ]; then
-		paramet=" -L -a 3"
-	else
-		error "${EXPERIMENT} is not a -e valid parameter"
-	fi
-
-	jobs=$(awk -v threads=$THREADS '{print int(threads/2)}' <(echo "."))
-
-	info 'Running Stringtie'
-	for i in $(cat ${FASTQ}); do
-		echo "stringtie $i.bam $paramet -G $GTF -p 2 -o /home/output_str/${PREFIX}/${i/*\/}.gtf"
-	done | parallel -j $jobs
-
-	info 'Joining gtfs'
-	stringtie --merge -p $THREADS -G $GTF -o /home/output/$PREFIX.merge.gtf /home/output_str/${PREFIX}/*.gtf
-
-	info "Done"
-}
-
-chimeric() {
-	## Annotation gencode
-	## Prefix and RTC list (Input)
-	## freddie chimeric -p K562_short -i input/rtc.bed -g <gtf-path> -G <genome-path> -y default
-
-	info 'Finding new transcripts'
-	mkdir /home/output/tmp/ 2> /dev/null
-
-	#Dicionário de protein codings
-
-	awk '{if ($3 == "CDS") print $10}' $GTF | sed 's/;\|"//g' | cut -d . -f 1 | sort -u \
-		| fgrep -f - /home/output/$PREFIX.merge.gtf | awk -F'"' '{print $2}' | sort -u | cut -d . -f 1 > /home/output/tmp/$PREFIX.dic.tmp
-
-	#Filtro de transcritos anotados
-	fgrep "transcript_id \"MSTRG" /home/output/$PREFIX.merge.gtf > /home/output/$PREFIX.novels.gtf
-
-	#Pegando os exons dos novos transcritos
-	awk -F "\t" '{if ($3 == "exon" && $1 ~/chr/) print $1"\t"$4"\t"$5"\t"$9}' /home/output/$PREFIX.novels.gtf | sort -k1,1 -k2,2n \
-		> /home/output/tmp/$PREFIX.tmp
-
-	#Lista dos transcritos novos que tem RTC
-	info 'Finding chimeric transcripts'
-	if [ ${TYPE} = "strict" ]; then
-		bedtools intersect -r -f 0.5 -wo -a $INPUT -b /home/output/tmp/$PREFIX.tmp | cut -f 4,8 \
-			| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' | sed 's/"\|;//g' \
-			| sort -u | awk -v OFS="\t" '{print $1,$2,$2,$3}' \
-			| sort -k1,1 -k2,2n | bedtools merge -o collapse -i - -c 4 \
-			| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
-			> /home/output/$PREFIX.chimeric.txt
-	elif [ ${TYPE} = "default" ]; then
-		bedtools intersect -f 0.5 -wo -a $INPUT -b /home/output/tmp/$PREFIX.tmp | cut -f 4,8 \
-		| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' | sed 's/"\|;//g' \
-		| sort -u | awk -v OFS="\t" '{print $1,$2,$2,$3}' \
-		| sort -k1,1 -k2,2n | bedtools merge -o collapse -i - -c 4 \
-		| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
-		> /home/output/$PREFIX.chimeric.txt
-	else
-		error "${TYPE} is not a valid parameter"
-	fi
-
-	#Montando um gtf dos transcritos novos anotados pelo stringtie
-	fgrep -w -f <(cut -f 1 /home/output/$PREFIX.chimeric.txt) /home/output/$PREFIX.merge.gtf > /home/output/$PREFIX.protein.gtf
-
-	#Montando um gtf e um bed com possiveis transcritos quiméricos
-	grep -w -f /home/output/tmp/$PREFIX.dic.tmp /home/output/$PREFIX.protein.gtf > /home/output/tmp/$PREFIX.chimeric.tmp.gtf
-	grep -w exon /home/output/tmp/$PREFIX.chimeric.tmp.gtf | cut -f 1,4,5,9 > /home/output/tmp/$PREFIX.exon.bed
-
-	#Criando um bed com todos os transcritos ja anotados de protein_coding
-	awk '{if ($3 == "CDS") print $12}' $GTF | sed 's/;\|"//g' \
-		| sort -u | fgrep -wf - $GTF | awk '{if ($3 == "exon") print}'| cut -f 1,4,5,9 \
-		| bedtools intersect -wo -a /home/output/tmp/$PREFIX.exon.bed -b - | cut -f 4,8 \
-		| awk -F '"' '{print $4"\t"$8"\t"$10}' | sort | uniq -c | sort -k2,2 -k1,1r > /home/output/tmp/$PREFIX.partial.tsv
-
-	> /home/output/$PREFIX.most_shared.tsv
-	fgrep MSTRG /home/output/tmp/$PREFIX.partial.tsv \
-		| awk -v OFS="\t" '{if ($1 > 1) print $1,$2,$3,$4}' | sort -k2,2 -k1,1nr \
-		| awk '!D[$2]++' | awk '{print $1,$2}' \
-		| fgrep -wf - /home/output/tmp/$PREFIX.partial.tsv | awk -F" " '{print $2"\t"$3"\t"$4}' \
-		> /home/output/$PREFIX.most_shared.tsv
-
-	fgrep -w -f <(cut -f 1 /home/output/$PREFIX.most_shared.tsv| sort -u) /home/output/$PREFIX.protein.gtf > /home/output/tmp/$PREFIX.chimeric.gtf
-
-	#Classificando internal initial e final
-	python3 /app/freddie/scripts/bed_novel.py /home/output/tmp/$PREFIX.chimeric.gtf > /home/output/tmp/$PREFIX.info.tmp
-
-	sed 's/\\//g' /home/output/$PREFIX.chimeric.txt > /home/output/tmp/$PREFIX.joined.txt
-
-	join <(sort -k1,1 -k2,2n /home/output/tmp/$PREFIX.info.tmp) <(sort -k1,1 -k2,2n /home/output/tmp/$PREFIX.joined.txt) \
-		| awk -F " " '{if ($3 == $4 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
-			else if ($3 == $4 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
-			else if ($4 == 1 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
-			else if ($4 == 1 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
-			else print $1"\t"$2"\t"$3"\t"$4"\tNovel Internal"}' > /home/output/tmp/$PREFIX.info.tsv
-
-	grep -v -f <(cut -f 1 /home/output/tmp/$PREFIX.info.tsv | uniq -c | awk '{if ($1 > 1) print $2}') /home/output/tmp/$PREFIX.info.tsv > /home/output/$PREFIX.info.tsv
-	grep -f <(cut -f 1,4 /home/output/tmp/$PREFIX.info.tsv | uniq -c | awk '{if ($1 > 1) print $2}') /home/output/tmp/$PREFIX.info.tsv >> /home/output/$PREFIX.info.tsv
-
-	cut -f 1 /home/output/$PREFIX.info.tsv | fgrep -wf - /home/output/tmp/$PREFIX.chimeric.gtf \
-		| awk -F \" '{print $4"\t"$0}' | sort -k1,1 -k4,4r \
-		| join - <(sort -k1,1 /home/output/$PREFIX.chimeric.txt) \
-		| awk -v OFS="\t" -F ' ' '{if ($4 == "transcript") print $2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" chimeric_event \""$15"\"; chimeric_exon_number \""$14"\";"; \
-			else print$2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" "$14" "$15}' \
-		> /home/output/$PREFIX.chimeric.gtf
-
-	#Arquivo fasta dos possiveis transcritos quimericos do stringtie
-	gffread /home/output/$PREFIX.chimeric.gtf -g $GENOME -w /home/output/$PREFIX.chimeric.fasta
-
-	rm /home/output/$PREFIX.novels.gtf
-	rm /home/output/$PREFIX.chimeric.txt
-	rm /home/output/tmp/*${PREFIX}*.tmp
-	rm /home/output/tmp/*${PREFIX}*
-	rm /home/output/$PREFIX.protein.gtf
-
-	info "Done"
-}
-
-coding() {
-	## Annotation gencode
-	## Prefix
-	## freddie coding -p K562_short -m <name-to-rnasambamodel> -d <path-to-proteinseq>
-
-	#Rodar o RNASamba
-	info "Running RNASamba"
-
-	rnasamba classify \
-		-p /home/output/$PREFIX.predicted_proteins.fa /home/output/$PREFIX.classification.tsv /home/output/$PREFIX.chimeric.fasta $MODEL
-
-	#Movendo os resultados do RNASamba para o output
-	#mv ann/$PREFIX.* output/
-
-	#Selecionando somente os transcritos dos protein_coding com protencial codificante
-	info "Selecting chimeric transcripts with coding potential"
-	awk '{if ($3 >= 0.9) print $1}' /home/output/$PREFIX.classification.tsv \
-		| sed 1d | grep -wf - /home/output/$PREFIX.most_shared.tsv | cut -d . -f 1,2,3 | sort -u \
-		| awk '{print $2"\t"$1}' | cut -d . -f 1,2 |  awk '{print $2"\t"$1}' \
-		> /home/output/tmp/$PREFIX.coding.txt
-
-	awk '{if ($3 >= 0.9) print $1}' /home/output/$PREFIX.classification.tsv | sed 1d | awk -F'.' '{print $1"."$2"."$3" gene="$1"."$2}'\
-		> /home/output/tmp/$PREFIX.transcript.txt
-
-	#Selecionando a sequencia de AA dos respectivos.
-	seqtk subseq /home/output/$PREFIX.predicted_proteins.fa /home/output/tmp/$PREFIX.transcript.txt > /home/output/$PREFIX.novel_proteins.fa
-	seqtk subseq $PROTEIN_DB <(cut -f 2 /home/output/tmp/$PREFIX.coding.txt) > /home/output/$PREFIX.ann_proteins.fa
-
-	info "Done"
-}
-
-pfam() {
-	info "Running PFAM..."
-	cat /home/output/$PREFIX.novel_proteins.fa /home/output/$PREFIX.ann_proteins.fa > /home/output/tmp/pfam.$PREFIX.tmp
-
-	if ! [ -f /home/ref/Pfam-A.hmm ]; then
-		wget --directory-prefix=/home/ref/ ftp://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam31.0/Pfam-A.hmm.gz
-		gunzip /home/ref/Pfam-A.hmm.gz
-		hmmpress /home/ref/Pfam-A.hmm
-	fi
-
-	hmmsearch --tblout /home/output/tmp/pfam.hmm.$PREFIX -E 1e-6 --cpu 4 /home/ref/Pfam-A.hmm /home/output/tmp/pfam.$PREFIX.tmp > /home/output/tmp/log 2> /home/output/tmp/log.err
-
-	info "Comparing chimeric domains with host domains"
-	sed -i "s/\ gene=/\t/g" /home/output/tmp/$PREFIX.transcript.txt
-	join -1 2 -2 1 <(sort -k2,2 /home/output/tmp/$PREFIX.transcript.txt) <(sort -k1,1 /home/output/tmp/$PREFIX.coding.txt)| sed 's/ /\t/g' \
-		> /home/output/tmp/$PREFIX.join.txt
-
-	while read gene trans host; do
-		grep -w $trans /home/output/tmp/pfam.hmm.$PREFIX > /home/output/tmp/$PREFIX.$trans.$host.txt
-		grep -w $host /home/output/tmp/pfam.hmm.$PREFIX >> /home/output/tmp/$PREFIX.$trans.$host.txt
-		grep -v \# /home/output/tmp/$PREFIX.$trans.$host.txt | awk -F" " '{print $1,$3,$6,$4}' > /home/output/tmp/$PREFIX.pfam.tmp
-		python3 /app/freddie/scripts/comp_dom.py /home/output/tmp/$PREFIX.pfam.tmp $trans > /home/output/tmp/$PREFIX.$trans.$host.pfam.tsv
-	done < /home/output/tmp/$PREFIX.join.txt
-
-	for i in $(cut -f 2 /home/output/tmp/$PREFIX.transcript.txt); do
-		cat /home/output/tmp/$PREFIX.$i.*.pfam.tsv | grep -v \# > /home/output/tmp/$PREFIX.$i.pfamf.tsv
-	done
-
-	cat /home/output/tmp/$PREFIX.*.pfamf.tsv > /home/output/$PREFIX.info_dom.tsv
-
-	rm /home/output/tmp/$PREFIX*
-	rm /home/output/tmp/*$PREFIX*
-	rm /home/output/tmp/$PREFIX.coding.txt
-	rm /home/output/tmp/$PREFIX.transcript.txt
-
-	info "Done"
-}
-
-expression() {
-	## freddie expression -p K562_short -f fastq.txt -t 12 -e short
-	local paramet
-	local jobs
-	local arq
-	local end
-
-	if [ ${EXPERIMENT} = "short" ]; then
-		paramet=" -e"
-	elif [ ${EXPERIMENT} = "long" ]; then
-		paramet="-e -L"
-	else
-		error "${EXPERIMENT} is not a -e valid parameter"
-	fi
-
-	jobs=$(awk -v threads=$THREADS '{print int(threads/2)}' <(echo "."))
-	mkdir /home/output/$PREFIX 2> /dev/null
-
-	info "Performing expression"
-	for i in $(cat ${FASTQ}); do
-		echo "stringtie $i.bam $paramet -G /home/output/$PREFIX.merge.gtf -p 2 -o /home/output/$PREFIX/${i/*\/}_exp.gtf"
-	done | parallel -j $jobs
-
-	info 'Merging samples ...'
-	jobs=$(awk -v threads=$THREADS '{print int(threads/2)}' <(echo "."))
-	for i in $(cat ${FASTQ}); do
-		echo "awk -v OFS='\t' '{if (\$12 ~/ENST/ && \$3 == \"transcript\") print \$10,\$12,\$20; \
-			else if (\$12 ~/MSTRG/ && \$3 == \"transcript\") print \$10,\$12,\$18}' /home/output/$PREFIX/${i/*\/}_exp.gtf | sed 's/;//g' | sed 's/\"//g' | sort -k1,1 \
-			> /home/output/$PREFIX/${i/*\/}_exp.tsv"
-	done | parallel -j $jobs
-
-	paste <(echo 'transcript_id') <(cat ${FASTQ} | awk -F'/' '{print $NF}' \
-		| tr -t '\n' '\t' | sed 's/\t$//1') > /home/output/tmp/$PREFIX.header.tsv
-
-	arq=$(ls /home/output/$PREFIX/*_exp.tsv | head -n1)
-	cut -f 2 $arq > /home/output/tmp/$PREFIX.transcript_id.tsv
-
-	end=$((3*$(ls /home/output/${PREFIX}/*_exp.tsv | wc -l)))
-	paste /home/output/${PREFIX}/*_exp.tsv | cut -f$(seq -s, 3 3 $end) > /home/output/tmp/$PREFIX.expression.tsv
-	cat /home/output/tmp/$PREFIX.header.tsv <(paste /home/output/tmp/$PREFIX.transcript_id.tsv /home/output/tmp/$PREFIX.expression.tsv) > /home/output/${PREFIX}/expression.tsv
-
-	info "Done"
-}
-
-results() {
-	> /home/output/tmp/${PREFIX}.nsamplespertranscript.tsv
-
-	info "Step1"
-	for i in $(cut -f 1 /home/output/$PREFIX.most_shared.tsv | sort -u); do
-		n_samples=$(grep -w $i /home/output/${PREFIX}/expression.tsv | tr -t '\t' '\n' | awk '{if ($1 > 0) print}' | grep -v MSTRG | wc -l)
-		echo -e $i'\t'$n_samples >> /home/output/tmp/${PREFIX}.nsamplespertranscript.tsv
-	done
-
-	info "Step2"
-	Rscript /app/freddie/scripts/median.R /home/output/${PREFIX}/expression.tsv /home/output/${PREFIX}/median.tsv
-
-	awk -F '.' '{print $0"\t"$1"."$2}' /home/output/$PREFIX.most_shared.tsv > /home/output/tmp/$PREFIX.most_shared.tsv
-
-	#Colocar uma coluna 4 com o id_gene não so o id_trans (MSTRG.X além de MSTRG.X.Y)
-	info "Step3"
-	> /home/output/tmp/$PREFIX.host_expression
-	> /home/output/tmp/$PREFIX.chimeric_expression
-	> /home/output/tmp/${PREFIX}.psi.tsv
-
-	for i in $(cut -f 4 /home/output/tmp/$PREFIX.most_shared.tsv | sort -u); do
-		head -n1 /home/output/${PREFIX}/expression.tsv > /home/output/tmp/$PREFIX.chimeric_expression
-		head -n1 /home/output/${PREFIX}/expression.tsv > /home/output/tmp/$PREFIX.host_expression
-		grep -w $i /home/output/tmp/$PREFIX.most_shared.tsv | cut -f 1 | fgrep -wf - /home/output/${PREFIX}/expression.tsv >> /home/output/tmp/$PREFIX.chimeric_expression
-		grep -w $i /home/output/tmp/$PREFIX.most_shared.tsv | cut -f 2 | fgrep -wf - /home/output/${PREFIX}.merge.gtf | \
-		fgrep -v exon | awk -F '"' '{print $4}' | \
-		fgrep -wf - /home/output/${PREFIX}/expression.tsv >> /home/output/tmp/$PREFIX.host_expression
-		Rscript /app/freddie/scripts/psi.R /home/output/tmp/$PREFIX.host_expression /home/output/tmp/$PREFIX.chimeric_expression $i >> /home/output/tmp/${PREFIX}.psi.tsv
-	done
-
-	rm /home/output/tmp/$PREFIX.chimeric_expression
-	rm /home/output/tmp/$PREFIX.host_expression
-
-	echo -e 'Id\tGene\tTranscript\tEvent_in\tSamples\tExpression_Median\tPsi\tCoding(?)\tObs' > /home/output/${PREFIX}.results
-	join <(sort -k1,1 /home/output/tmp/${PREFIX}.most_shared.tsv) <(sort -k1,1 /home/output/${PREFIX}.info.tsv| cut -f 1,5) | sed 's/Novel //g' | \
-	join - <(sort -k1,1 /home/output/tmp/${PREFIX}.nsamplespertranscript.tsv) | \
-	join - <(sed 's/"//g' /home/output/${PREFIX}/median.tsv | sort -k1,1) | sort -k4,4 | \
-	join -1 4 -2 1 - <(sort /home/output/tmp/${PREFIX}.psi.tsv) | sort -k2,2 | \
-	join -1 2 -2 1 - <(sort /home/output/${PREFIX}.classification.tsv | sort -k1,1 | \
-	awk '{if ($3 > 0.9) print $1"\tCoding"; else print $1"\tNon-Coding"}') | \
-	join -a 1 - <(sort /home/output/${PREFIX}.info_dom.tsv | cut -f 1,5 | sed 's/\ /espaco/g' | sort -k1,1) | \
-	awk '{$2=""; print $0}' - | sed 's/\ /\t/g' | sed 's/espaco/\ /g' >> /home/output/${PREFIX}.results
-
-
-	mkdir /home/output/$PREFIX/figures 2> /dev/null
-
-	for i in $(awk '{if ($2 >= 0.15) print $1}' /home/output/tmp/${PREFIX}.psi.tsv| sort -u) ; do
-		head -n1 /home/output/${PREFIX}/expression.tsv > /home/output/tmp/$PREFIX.chimeric_expression
-		head -n1 /home/output/${PREFIX}/expression.tsv > /home/output/tmp/$PREFIX.host_expression
-		grep -w $i /home/output/$PREFIX.most_shared.tsv | cut -f 1 | fgrep -wf - /home/output/${PREFIX}/expression.tsv >> /home/output/tmp/$PREFIX.chimeric_expression
-		grep -w $i /home/output/$PREFIX.most_shared.tsv | cut -f 3 | fgrep -wf - /home/output/${PREFIX}/expression.tsv >> /home/output/tmp/$PREFIX.host_expression
-		Rscript /app/freddie/scripts/boxplot_alt.R /home/output/tmp/$PREFIX.host_expression /home/output/tmp/$PREFIX.chimeric_expression /home/output/$PREFIX/figures/$i.svg
-	done
-
-	rm /home/output/tmp/$PREFIX.chimeric_expression
-	rm /home/output/tmp/$PREFIX.host_expression
-
-	info "Done"
-}
-
-help() {
-	echo "freddie $VERSION"
+# Bash pragmas
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Where I am
+ROOT_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
+
+# Load common lib
+source "$ROOT_DIR/lib/freddie_common"
+
+usage() {
+	echo "$PROG_NAME $VERSION"
 	echo ""
-	echo "Usage: freddie <CMD> [arguments] .."
+	echo "Usage: $PROG_NAME [-hv]"
+	echo "Usage: $PROG_NAME <command> [options]"
 	echo ""
-	echo "Where <CMD> can be one of:"
-
-	echo -e "\n\thelp\t\tPrint this help"
-	echo -e "\tversion\t\tPrint the current version"
-	echo -e "\tstring\t\tRun StringTie2"
-	echo -e "\tchimeric\tFinding potential chimeric transcripts"
-	echo -e "\tcoding\t\tEstimates the possibility of a chimeric transcript being coding"
-	echo -e "\tpfam\t\tAnalyzes the domains of the sequences generated in relation to the host transcript"
-	echo -e "\texpression\tMeasurement of transcript expression by kallisto"
-	echo -e "\tresults\t\tCompile results from the previous steps"
-
-	echo -e "\nAnd [arguments] are:"
-
-	echo -e "\n\t-p\tProject Prefix"
-	echo -e "\t-f\tFastq files path"
-	echo -e "\t-e\tType experiment"
-	echo -e "\t-g\tGTF file"
-	echo -e "\t-G\tReference Genome file"
-	echo -e "\t-i\tInput path"
-	echo -e "\t-y\tFilter type: strict or default"
-	echo -e "\t-t\tThreads"
-	echo -e "\t-m\tModel RNASamba file"
-	echo -e "\t-d\tDatabase of protein"
-}
-
-version() {
-	echo "$VERSION"
+	echo "Options:"
+	echo "  -h          Print this help"
+	echo "  -v          Print current version"
+	echo ""
+	echo "Commands:"
+	echo "  string      Run StringTie2"
+	echo "  chimeric    Finding potential chimeric"
+	echo "              transcripts"
+	echo "  coding      Estimates the possibility"
+	echo "              of a chimeric transcript"
+	echo "              being coding"
+	echo "  pfam        Analyzes the domains of the"
+	echo "              sequences generated in"
+	echo "              relation to the host"
+	echo "              transcript"
+	echo "  expression  Measurement of transcript"
+	echo "              expression by kallisto"
+	echo "  results     Compile results from the"
+	echo "              previous steps"
+	echo ""
 }
 
 parse_opt() {
-	while getopts ":i:p:f:t:e:g:G:y:m:d:" OPTION; do
+	while getopts ":hv" OPTION; do
 		case "$OPTION" in
-			i)
-				INPUT="$OPTARG"
+			h)
+				usage
+				exit
 				;;
-			p)
-				PREFIX="$OPTARG"
-				;;
-			f)
-				FASTQ="$OPTARG"
-				;;
-			t)
-				THREADS="$OPTARG"
-				;;
-			e)
-				EXPERIMENT="$OPTARG"
-				;;
-			g)
-				GTF="$OPTARG"
-				;;
-			G)
-				GENOME="$OPTARG"
-				;;
-			y)
-				TYPE="$OPTARG"
-				;;
-			m)
-				MODEL="$OPTARG"
-				;;
-			d)
-				PROTEIN_DB="$OPTARG"
+			v)
+				echo "$VERSION"
+				exit
 				;;
 			?)
-				error "No such option '-$OPTARG'"
+				error "No such option '-$OPTARG'\n$(try_help)"
 				;;
 		esac
 	done
 }
 
-main() {
-	[[ $# == 0 ]] && { help; exit; }
-
+parse_cmd() {
 	local cmd="$1"; shift
 
 	case "$cmd" in
@@ -428,15 +67,18 @@ main() {
 		pfam)       ;;
 		expression) ;;
 		results)    ;;
-		help)       ;;
-		version)    ;;
 		*)
-			error "'$cmd' is not a valid command"
+			error "'$cmd' is not a valid command\n$(try_help)"
 			;;
 	esac
 
-	parse_opt "$@"
-	$cmd
+	exec "$ROOT_DIR/bin/${PROG_NAME}_${cmd}" "$@"
 }
 
-main "$@"
+[[ $# == 0 ]] && { usage; exit; }
+
+if [[ "$1" =~ ^- ]]; then
+	parse_opt "$@"
+else
+	parse_cmd "$@"
+fi
