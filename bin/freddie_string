@@ -88,7 +88,8 @@ gtf="" # Pode ser gff?
 threads=8
 experiment="short"
 
-# Processing options
+# Processing variables
+cod="" # Current output dir
 paramet=""
 stringtie_nprocs=2
 jobs=1
@@ -153,29 +154,29 @@ else
 	jobs=$(( threads / stringtie_job ))
 fi
 
-# Create the base
-mkdir -p "$output_dir/$CMD_NAME"
+# Output dir concerning this command
+cod="$output_dir/$CMD_NAME"
 
-# Let's go to the working dir
-cd "$output_dir/$CMD_NAME"
+# Create the base
+mkdir -p "$cod"
 
 log_info 'Running Stringtie'
 parallel \
 	--max-procs=$jobs \
-	--joblog="stringtie_job.log" \
-	--workdir='.' \
+	--joblog="$cod/stringtie_job.log" \
 	stringtie \
 		'{}' \
 		"$paramet" \
 		-G "$gtf" \
 		-p $stringtie_nprocs \
-		-o '{/.}'.gtf \
-		'2>' '{/.}'.gtf.log
+		-o "$cod"/'{/.}'.gtf \
+		'2>' "$cod"/'{/.}'.gtf.log \
+	::: "${bams[@]}"
 
 if [[ "$?" -ne 0 ]]; then
 	log_error \
 		"stringtie failed:" \
-		"See '$(readlink -f stringtie_job.log)'" \
+		"See '$(readlink -f "$cod/stringtie_job.log")'" \
 		"for more details"
 fi
 
@@ -183,12 +184,12 @@ log_info 'Joining gtfs'
 stringtie --merge \
 	-p $threads \
 	-G "$gtf" \
-	-o 'merge.gtf' \
-	*.gtf \
-	2> "merge.gtf.log" \
+	-o "$cod/merge.gtf" \
+	"$cod"/*.gtf \
+	2> "$cod/merge.gtf.log" \
 	|| log_error \
 		"stringtie --merge failed:" \
-		"See '$(readlink -f merge.gtf.log)'"
+		"See '$(readlink -f "$cod/merge.gtf.log")'"
 		"for more details"
 
 log_info "Done"
