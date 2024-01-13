@@ -19,7 +19,7 @@ BIN_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
 source "$BIN_DIR/../lib/freddie_common"
 
 # My name
-SCRIPT_NAME="$(basename "$0")"
+SCRIPT_NAME="${0##*/}"
 
 # Command name
 CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
@@ -31,6 +31,41 @@ usage() {
 }
 
 validate_opt() {
+	local bam
+
+	# Mandatory options '-o', '-g' and '-f'
+	if [[ -z "$output_dir" ]]; then
+		error "Missing '-o' option\n$(try_help)"
+	fi
+
+	# If there is no fastq test for args
+	# Then, check for valid bam files
+	if [[ -z "$fastq" ]]; then
+		if [[ "${#bams[@]}" == 0 ]]; then
+			error "Neither '-f' option nor BAM file were passed\n$(try_help)"
+		fi
+		for bam in "${bams[@]}"; do
+			if [[ ! -f "$bam" ]]; then
+				error "No such file '$bam'"
+			fi
+		done
+	elif [[ ! -f "$fastq" ]]; then
+		error "No such file '$fastq'"
+	else
+		while read bam; do
+			if [[ ! -f "$bam" ]]; then
+				error "No such file '$bam'"
+			fi
+		done < "$fastq"
+	fi
+
+	if [[ -z "$gtf" ]]; then
+		error "Missing '-g' option\n$(try_help)"
+	elif [[ ! -f "$gtf" ]]; then
+		error "No such file '$gtf'"
+	fi
+
+	# Options
 	if [[ ! "$experiment" =~ ^(short|long)$ ]]; then
 		error "'$experiment' is not a valid '-e' option\n$(try_help)"
 	fi
@@ -39,43 +74,28 @@ validate_opt() {
 		error "'$threads' is not a valid '-t' option\n$(try_help)"
 	fi
 
-	# Mandatory options '-g' and '-f'
-	if [[ -z "$gtf" ]]; then
-		error "Missing '-g' option\n$(try_help)"
-	fi
-
-	if [[ -z "$fastq" ]]; then
-		error "Missing '-f' option\n$(try_help)"
-	fi
-
-	if [[ ! -f "$gtf" ]]; then
-		error "No such file '$gtf'"
-	fi
-
-	if [[ ! -f "$fastq" ]]; then
-		error "No such file '$fastq'"
-	fi
 }
 
 validate_dep() {
-	echo "Validate dependencies from prev cmd"
+	echo "I have no dep"
 }
 
 # Options
-prefix="out"
-output_dir="."
-threads=1
-experiment="short"
+output_dir=""
 fastq="" # Os BAMS estão em fastq?
-gtf="" # Pode ser gtff?
+bams=()
+gtf="" # Pode ser gff?
+threads=8
+experiment="short"
 
-# Processed options
+# Processing options
 paramet=""
+stringtie_nprocs=2
 jobs=1
 
 [[ $# == 0 ]] && { usage; exit; }
 
-while getopts ":ho:p:t:e:g:f:" OPTION; do
+while getopts ":ho:t:e:g:f:" OPTION; do
 	case "$OPTION" in
 		h)
 			usage
@@ -83,9 +103,6 @@ while getopts ":ho:p:t:e:g:f:" OPTION; do
 			;;
 		o)
 			output_dir="$OPTARG"
-			;;
-		p)
-			prefix="$OPTARG"
 			;;
 		t)
 			threads="$OPTARG"
@@ -105,32 +122,73 @@ while getopts ":ho:p:t:e:g:f:" OPTION; do
 	esac
 done
 
+# Get the files if they were passed as arg
+shift $(($OPTIND - 1))
+bams=("$@")
+
 # Check for errors
 validate_opt
 #validate_dep
 
 # MAIN
 
+# Load all files from $fastq file to $bams=()
+if [[ -n "$fastq" ]]; then
+	# Reset bams=() - just in case
+	bams=()
+	while read; do
+		bams+=("$REPLY")
+	done < "$fastq"
+fi
+
 if [[ "$experiment" == "long" ]]; then
 	paramet="-L -a 3"
 fi
 
-# Se for == 1? A divisão será 0?
-jobs=$(awk -v threads=$threads '{print int(threads/2)}' <(echo "."))
+# The max number of jobs is threads, then
+# set stringtie_nprocs and jobs accordingly
+if (( threads < stringtie_nprocs )); then
+	stringtie_nprocs=$threads
+else
+	jobs=$(( threads / stringtie_job ))
+fi
 
-# Just in case
-mkdir -p "$output_dir"
+# Create the base
+mkdir -p "$output_dir/$CMD_NAME"
+
+# Let's go to the working dir
+cd "$output_dir/$CMD_NAME"
 
 log_info 'Running Stringtie'
-for i in $(cat ${fastq}); do
-	echo "stringtie $i.bam $paramet -G $gtf -p 2 -o $output_dir/${prefix}.${i/*\/}.gtf"
-done | parallel -j $jobs
+parallel \
+	--max-procs=$jobs \
+	--joblog="stringtie_job.log" \
+	--workdir='.' \
+	stringtie \
+		'{}' \
+		"$paramet" \
+		-G "$gtf" \
+		-p $stringtie_nprocs \
+		-o '{/.}'.gtf \
+		'2>' '{/.}'.gtf.log
+
+if [[ "$?" -ne 0 ]]; then
+	log_error \
+		"stringtie failed:" \
+		"See '$(readlink -f stringtie_job.log)'" \
+		"for more details"
+fi
 
 log_info 'Joining gtfs'
 stringtie --merge \
 	-p $threads \
 	-G "$gtf" \
-	-o "$output_dir/$prefix.merge.gtf" \
-	"$output_dir/${prefix}".*.gtf
+	-o 'merge.gtf' \
+	*.gtf \
+	2> "merge.gtf.log" \
+	|| log_error \
+		"stringtie --merge failed:" \
+		"See '$(readlink -f merge.gtf.log)'"
+		"for more details"
 
 log_info "Done"
