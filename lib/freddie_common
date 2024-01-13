@@ -56,3 +56,13 @@ try_help() {
 		echo "Try '$PROG_NAME -h' for more information"
 	fi
 }
+
+# Warn if we received a signal to exit
+exit_on_signal() {
+	log_warn "Received signal '$1'. Exiting ..."
+	exit 255
+}
+
+for sig in SIGINT SIGQUIT SIGABRT SIGKILL SIGTERM; do
+	trap "exit_on_signal $sig" $sig
+done
