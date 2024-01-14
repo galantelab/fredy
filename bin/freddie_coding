@@ -52,6 +52,10 @@ validate_dep() {
 	if [[ ! -f "$output_dir/$prefix.chimeric.fasta" ]]; then
 		error "'$output_dir/$prefix.chimeric.fasta' not found. Maybe you need to run '$PROG_NAME chimeric' before"
 	fi
+
+	if [[ ! -f "$output_dir/$prefix.most_shared.tsv" ]]; then
+		error "'$output_dir/$prefix.most_shared.tsv' not found. Maybe you need to run '$PROG_NAME chimeric' before"
+	fi
 }
 
 # Options
