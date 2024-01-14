@@ -21,6 +21,9 @@ SCRIPT_NAME="${0##*/}"
 # Command name
 CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
 
+# Dep files: string
+STRING_MERGE_GTF="string/merge.gtf"
+
 usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
@@ -28,55 +31,65 @@ usage() {
 }
 
 validate_opt() {
-	if [[ ! "$type" =~ ^(strict|default)$ ]]; then
-		error "'$type' is not a valid '-y' option\n$(try_help)"
+	# Mandatory options '-o' '-g', '-G' and '-i'
+	if [[ -z "$output_dir" ]]; then
+		error "Missing '-o' option\n$(try_help)"
+	elif [[ ! -d "$output_dir" ]]; then
+		error "No such dir '$output_dir'.\nStart" \
+			"your analysis from '$PROG_NAME string'"
 	fi
 
-	# Mandatory options '-g', '-G' and '-i'
 	if [[ -z "$gtf" ]]; then
 		error "Missing '-g' option\n$(try_help)"
+	elif [[ ! -f "$gtf" ]]; then
+		error "No such file '$gtf'"
 	fi
 
 	if [[ -z "$genome" ]]; then
 		error "Missing '-G' option\n$(try_help)"
+	elif [[ ! -f "$genome" ]]; then
+		error "No such file '$genome'"
 	fi
 
 	if [[ -z "$input" ]]; then
 		error "Missing '-i' option\n$(try_help)"
-	fi
-
-	if [[ ! -f "$gtf" ]]; then
-		error "No such file '$gtf'"
-	fi
-
-	if [[ ! -f "$genome" ]]; then
-		error "No such file '$genome'"
-	fi
-
-	if [[ ! -f "$input" ]]; then
+	elif [[ ! -f "$input" ]]; then
 		error "No such file '$input'"
+	fi
+
+	# Options
+	if [[ ! "$type" =~ ^(strict|default)$ ]]; then
+		error "'$type' is not a valid '-y' option\n$(try_help)"
 	fi
 }
 
 validate_dep() {
 	# O merge.gtf deve ser passado pelo usuário ou
 	# ser localizado pelo output_dir e prefix?
-	if [[ ! -f "$output_dir/$prefix.merge.gtf" ]]; then
-		error "'$output_dir/$prefix.merge.gtf' not found. Maybe you need to run '$PROG_NAME string' before"
+	#
+	# string
+	if [[ ! -f "$string_merge_gtf" ]]; then
+		error "'$string_merge_gtf' not found.\nMaybe" \
+			"you need to run '$PROG_NAME string' before"
 	fi
 }
 
 # Options
-prefix="out"
-output_dir="."
-type="default"
+output_dir=""
 input="" # BED?
-gtf="" # Pode ser gtff?
+gtf="" # Pode ser gff?
 genome=""
+type="default"
+
+# Processing variables
+cod="" # Current output dir
+tdir=""
+paramet=""
+string_merge_gtf=""
 
 [[ $# == 0 ]] && { usage; exit; }
 
-while getopts ":ho:p:i:g:G:y:" OPTION; do
+while getopts ":ho:i:g:G:y:" OPTION; do
 	case "$OPTION" in
 		h)
 			usage
@@ -84,9 +97,6 @@ while getopts ":ho:p:i:g:G:y:" OPTION; do
 			;;
 		o)
 			output_dir="$OPTARG"
-			;;
-		p)
-			prefix="$OPTARG"
 			;;
 		i)
 			input="$OPTARG"
@@ -106,82 +116,86 @@ while getopts ":ho:p:i:g:G:y:" OPTION; do
 	esac
 done
 
-# Check for errors
+# Check for errors in opt
 validate_opt
+
+# Set the dep files paths
+string_merge_gtf="$output_dir/$STRING_MERGE_GTF"
+
+# Check for errors in dep
 validate_dep
 
 # MAIN
 
+if [[ "$type" == "strict" ]]; then
+	paramet='-r'
+fi
+
+# Output dir concerning this command
+cod="$output_dir/$CMD_NAME"
+
+# Create the base
+mkdir -p "$cod"
+
+# Create a temp dir
+tdir=$(mktemp -d)
+
+# Remove it automagicly
+trap 'rm -rf "$tdir"' EXIT
+
 log_info 'Finding new transcripts'
-mkdir -p $output_dir/tmp/
 
 # Dicionário de protein codings
 awk '{if ($3 == "CDS") print $10}' "$gtf" \
 	| sed 's/;\|"//g' \
 	| cut -d . -f 1 \
 	| sort -u \
-	| fgrep -f - "$output_dir/$prefix.merge.gtf" \
+	| fgrep -f - "$string_merge_gtf" \
 	| awk -F'"' '{print $2}' \
 	| sort -u \
-	| cut -d . -f 1 > "$output_dir/tmp/$prefix.dic.tmp"
+	| cut -d . -f 1 > "$tdir/dic.txt"
 
 #Filtro de transcritos anotados
-fgrep "transcript_id \"MSTRG" "$output_dir/$prefix.merge.gtf" \
-	> "$output_dir/$prefix.novels.gtf"
+fgrep "transcript_id \"MSTRG" \
+	"$string_merge_gtf" > "$cod/novels.gtf"
 
 #Pegando os exons dos novos transcritos
 awk -F "\t" '{if ($3 == "exon" && $1 ~/chr/) print $1"\t"$4"\t"$5"\t"$9}' \
-	"$output_dir/$prefix.novels.gtf" \
+	"$cod/novels.gtf" \
 	| sort -k1,1 -k2,2n \
-	> "$output_dir/tmp/$prefix.tmp"
+	> "$tdir/novels_exon.bed"
 
 #Lista dos transcritos novos que tem RTC
 log_info 'Finding chimeric transcripts'
-if [[ "$type" == "strict" ]]; then
-	bedtools intersect -r -f 0.5 -wo \
-		-a "$input" \
-		-b "$output_dir/tmp/$prefix.tmp" \
-		| cut -f 4,8 \
-		| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' \
-		| sed 's/"\|;//g' \
-		| sort -u \
-		| awk -v OFS="\t" '{print $1,$2,$2,$3}' \
-		| sort -k1,1 -k2,2n \
-		| bedtools merge -o collapse -i - -c 4 \
-		| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
-		> "$output_dir/$prefix.chimeric.txt"
-else
-	# default
-	bedtools intersect -f 0.5 -wo \
-		-a "$input" \
-		-b "$output_dir/tmp/$prefix.tmp" \
-		| cut -f 4,8 \
-		| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' \
-		| sed 's/"\|;//g' \
-		| sort -u \
-		| awk -v OFS="\t" '{print $1,$2,$2,$3}' \
-		| sort -k1,1 -k2,2n \
-		| bedtools merge -o collapse -i - -c 4 \
-		| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
-		> "$output_dir/$prefix.chimeric.txt"
-fi
+bedtools intersect "$paramet" -f 0.5 -wo \
+	-a "$input" \
+	-b "$tdir/novels_exon.bed" \
+	| cut -f 4,8 \
+	| awk -v OFS="\t" '{print $5,$7,"\""$1"\""}' \
+	| sed 's/"\|;//g' \
+	| sort -u \
+	| awk -v OFS="\t" '{print $1,$2,$2,$3}' \
+	| sort -k1,1 -k2,2n \
+	| bedtools merge -o collapse -i - -c 4 \
+	| awk -v OFS="\t" '{if ($3-$2==2) print $1,$2+1,$NF; else if ($3-$2<2) print $1,$2,$NF}' \
+	> "$cod/chimeric.txt"
 
 #Montando um gtf dos transcritos novos anotados pelo stringtie
 fgrep -w \
-	-f <(cut -f 1 "$output_dir/$prefix.chimeric.txt") \
-	"$output_dir/$prefix.merge.gtf" \
-	> "$output_dir/$prefix.protein.gtf"
+	-f <(cut -f 1 "$cod/chimeric.txt") \
+	"$string_merge_gtf" \
+	> "$cod/protein.gtf"
 
 #Montando um gtf e um bed com possiveis transcritos quiméricos
 grep -w \
-	-f "$output_dir/tmp/$prefix.dic.tmp" \
-	"$output_dir/$prefix.protein.gtf" \
-	> "$output_dir/tmp/$prefix.chimeric.tmp.gtf"
+	-f "$tdir/dic.txt" \
+	"$cod/protein.gtf" \
+	> "$tdir/chimeric_dic.gtf"
 
 grep -w exon \
-	"$output_dir/tmp/$prefix.chimeric.tmp.gtf" \
+	"$tdir/chimeric_dic.gtf" \
 	| cut -f 1,4,5,9 \
-	> "$output_dir/tmp/$prefix.exon.bed"
+	> "$tdir/exon.bed"
 
 #Criando um bed com todos os transcritos ja anotados de protein_coding
 awk '{if ($3 == "CDS") print $12}' "$gtf" \
@@ -190,77 +204,73 @@ awk '{if ($3 == "CDS") print $12}' "$gtf" \
 	| fgrep -wf - "$gtf" \
 	| awk '{if ($3 == "exon") print}' \
 	| cut -f 1,4,5,9 \
-	| bedtools intersect -wo -a "$output_dir/tmp/$prefix.exon.bed" -b - \
+	| bedtools intersect -wo -a "$tdir/exon.bed" -b - \
 	| cut -f 4,8 \
 	| awk -F '"' '{print $4"\t"$8"\t"$10}' \
 	| sort \
 	| uniq -c \
 	| sort -k2,2 -k1,1r \
-	> "$output_dir/tmp/$prefix.partial.tsv"
+	> "$tdir/partial.tsv"
 
-> "$output_dir/$prefix.most_shared.tsv"
-fgrep MSTRG "$output_dir/tmp/$prefix.partial.tsv" \
+> "$cod/most_shared.tsv"
+fgrep MSTRG "$tdir/partial.tsv" \
 	| awk -v OFS="\t" '{if ($1 > 1) print $1,$2,$3,$4}' \
 	| sort -k2,2 -k1,1nr \
 	| awk '!D[$2]++' \
 	| awk '{print $1,$2}' \
-	| fgrep -wf - "$output_dir/tmp/$prefix.partial.tsv" \
+	| fgrep -wf - "$tdir/partial.tsv" \
 	| awk -F" " '{print $2"\t"$3"\t"$4}' \
-	> "$output_dir/$prefix.most_shared.tsv"
+	> "$cod/most_shared.tsv"
 
 fgrep -w \
-	-f <(cut -f 1 "$output_dir/$prefix.most_shared.tsv" | sort -u) \
-	"$output_dir/$prefix.protein.gtf" \
-	> "$output_dir/tmp/$prefix.chimeric.gtf"
+	-f <(cut -f 1 "$cod/most_shared.tsv" | sort -u) \
+	"$cod/protein.gtf" \
+	> "$tdir/chimeric.gtf"
 
 #Classificando internal initial e final
 python3 "$BIN_DIR/../scripts/bed_novel.py" \
-	"$output_dir/tmp/$prefix.chimeric.gtf" \
-	> "$output_dir/tmp/$prefix.info.tmp"
+	"$tdir/chimeric.gtf" \
+	> "$tdir/info_bed_novel.txt" \
+	|| log_error "'bed_novel.py' returned an error"
 
-sed 's/\\//g' "$output_dir/$prefix.chimeric.txt" \
-	> "$output_dir/tmp/$prefix.joined.txt"
+sed 's/\\//g' "$cod/chimeric.txt" \
+	> "$tdir/joined.txt"
 
 join \
-	<(sort -k1,1 -k2,2n "$output_dir/tmp/$prefix.info.tmp") \
-	<(sort -k1,1 -k2,2n "$output_dir/tmp/$prefix.joined.txt") \
+	<(sort -k1,1 -k2,2n "$tdir/info_bed_novel.txt") \
+	<(sort -k1,1 -k2,2n "$tdir/joined.txt") \
 	| awk -F " " '{if ($3 == $4 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
 		else if ($3 == $4 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
 		else if ($4 == 1 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
 		else if ($4 == 1 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
 		else print $1"\t"$2"\t"$3"\t"$4"\tNovel Internal"}' \
-	> "$output_dir/tmp/$prefix.info.tsv"
+	> "$tdir/info.tsv"
 
 grep -v \
-	-f <(cut -f 1 "$output_dir/tmp/$prefix.info.tsv" \
+	-f <(cut -f 1 "$tdir/info.tsv" \
 	| uniq -c \
-	| awk '{if ($1 > 1) print $2}') "$output_dir/tmp/$prefix.info.tsv" \
-	> "$output_dir/$prefix.info.tsv"
+	| awk '{if ($1 > 1) print $2}') "$tdir/info.tsv" \
+	> "$cod/info.tsv"
 
 grep \
-	-f <(cut -f 1,4 "$output_dir/tmp/$prefix.info.tsv" \
+	-f <(cut -f 1,4 "$tdir/info.tsv" \
 	| uniq -c \
-	| awk '{if ($1 > 1) print $2}') "$output_dir/tmp/$prefix.info.tsv" \
-	>> "$output_dir/$prefix.info.tsv"
+	| awk '{if ($1 > 1) print $2}') "$tdir/info.tsv" \
+	>> "$cod/info.tsv"
 
-cut -f 1 "$output_dir/$prefix.info.tsv" \
-	| fgrep -wf - "$output_dir/tmp/$prefix.chimeric.gtf" \
+cut -f 1 "$cod/info.tsv" \
+	| fgrep -wf - "$tdir/chimeric.gtf" \
 	| awk -F \" '{print $4"\t"$0}' \
 	| sort -k1,1 -k4,4r \
-	| join - <(sort -k1,1 "$output_dir/$prefix.chimeric.txt") \
+	| join - <(sort -k1,1 "$cod/chimeric.txt") \
 	| awk -v OFS="\t" -F ' ' '{if ($4 == "transcript") print $2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" chimeric_event \""$15"\"; chimeric_exon_number \""$14"\";"; \
 		else print$2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" "$14" "$15}' \
-	> "$output_dir/$prefix.chimeric.gtf"
+	> "$cod/chimeric.gtf"
 
 #Arquivo fasta dos possiveis transcritos quimericos do stringtie
-gffread "$output_dir/$prefix.chimeric.gtf" \
+gffread "$cod/chimeric.gtf" \
 	-g "$genome" \
-	-w "$output_dir/$prefix.chimeric.fasta"
-
-rm "$output_dir/$prefix.novels.gtf"
-rm "$output_dir/$prefix.chimeric.txt"
-rm "$output_dir/tmp"/*${prefix}*.tmp
-rm "$output_dir/tmp"/*${prefix}* ## redundante?
-rm "$output_dir/$prefix.protein.gtf"
+	-w "$cod/chimeric.fasta" \
+	|| log_error "gffread returned an error"
 
 log_info "Done"
