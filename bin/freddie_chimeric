@@ -231,7 +231,7 @@ fgrep -w \
 python3 "$BIN_DIR/../scripts/bed_novel.py" \
 	"$tdir/chimeric.gtf" \
 	> "$tdir/info_bed_novel.txt" \
-	|| log_error "'bed_novel.py' returned an error"
+	|| log_error "'bed_novel.py' failed"
 
 sed 's/\\//g' "$cod/chimeric.txt" \
 	> "$tdir/joined.txt"
