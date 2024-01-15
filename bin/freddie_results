@@ -17,6 +17,22 @@ SCRIPT_NAME="${0##*/}"
 # Command name
 CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
 
+# Dep files: string
+STRING_MERGE_GTF="string/merge.gtf"
+
+# Dep files: chimeric
+CHIMERIC_MOST_SHARED_TSV="chimeric/most_shared.tsv"
+CHIMERIC_INFO_TSV="chimeric/info.tsv"
+
+# Dep files: coding
+CODING_CLASSIFICATION_TSV="coding/classification.tsv"
+
+# Dep files: pfam
+PFAM_INFO_DOM_TSV="pfam/info_dom.tsv"
+
+# Dep files: expression
+EXPRESSION_EXPRESSION_TSV="expression/expression.tsv"
+
 usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
@@ -24,42 +40,68 @@ usage() {
 }
 
 validate_opt() {
-	echo "Validate options"
+	# Mandatory options '-o'
+	if [[ -z "$output_dir" ]]; then
+		error "Missing '-o' option\n$(try_help)"
+	elif [[ ! -d "$output_dir" ]]; then
+		error "No such dir '$output_dir'.\nStart" \
+			"your analysis from '$PROG_NAME string'"
+	fi
 }
 
 validate_dep() {
-	# chimeric
-	if [[ ! -f "$output_dir/$prefix.most_shared.tsv" ]]; then
-		error "'$output_dir/$prefix.most_shared.tsv' not found. Maybe you need to run '$PROG_NAME chimeric' before"
+	# string
+	if [[ ! -f "$string_merge_gtf" ]]; then
+		error "'$string_merge_gtf' not found.\nMaybe" \
+			"you need to run '$PROG_NAME string' before"
 	fi
 
-	if [[ ! -f "$output_dir/$prefix.info.tsv" ]]; then
-		error "'$output_dir/$prefix.info.tsv' not found. Maybe you need to run '$PROG_NAME chimeric' before"
+	# chimeric
+	if [[ ! -f "$chimeric_most_shared_tsv" ]]; then
+		error "'$chimeric_most_shared_tsv' not found.\nMaybe" \
+			"you need to run '$PROG_NAME chimeric' before"
+	fi
+
+	if [[ ! -f "$chimeric_info_tsv" ]]; then
+		error "'$chimeric_info_tsv' not found.\nMaybe" \
+			"you need to run '$PROG_NAME chimeric' before"
 	fi
 
 	# coding
-	if [[ ! -f "$output_dir/$prefix.classification.tsv" ]]; then
-		error "'$output_dir/$prefix.classification.tsv' not found. Maybe you need to run '$PROG_NAME coding' before"
+	if [[ ! -f "$coding_classification_tsv" ]]; then
+		error "'$coding_classification_tsv' not found.\nMaybe" \
+			"you need to run '$PROG_NAME coding' before"
 	fi
 
 	# pfam
-	if [[ ! -f "$output_dir/$prefix.info_dom.tsv" ]]; then
-		error "'$output_dir/$prefix.info_dom.tsv' not found. Maybe you need to run '$PROG_NAME pfam' before"
+	if [[ ! -f "$pfam_info_dom_tsv" ]]; then
+		error "'$pfam_info_dom_tsv' not found.\nMaybe" \
+			"you need to run '$PROG_NAME pfam' before"
 	fi
 
 	# expression
-	if [[ ! -f "$output_dir/$prefix/expression.tsv" ]]; then
-		error "'$output_dir/$prefix/expression.tsv' not found. Maybe you need to run '$PROG_NAME expression' before"
+	if [[ ! -f "$expression_expression_tsv" ]]; then
+		error "'$expression_expression_tsv' not found.\nMaybe" \
+			"you need to run '$PROG_NAME expression' before"
 	fi
 }
 
 # Options
-prefix="out"
-output_dir="."
+output_dir=""
+
+# Processing variables
+cod="" # Current output dir
+tdir=""
+string_merge_gtf=""
+chimeric_most_shared_tsv=""
+chimeric_info_tsv=""
+coding_classification_tsv=""
+pfam_info_dom_tsv=""
+expression_expression_tsv=""
 
 [[ $# == 0 ]] && { usage; exit; }
 
-while getopts ":ho:p:" OPTION; do
+while getopts ":ho:" OPTION; do
 	case "$OPTION" in
 		h)
 			usage
@@ -68,142 +110,154 @@ while getopts ":ho:p:" OPTION; do
 		o)
 			output_dir="$OPTARG"
 			;;
-		p)
-			prefix="$OPTARG"
-			;;
 		?)
 			error "No such option '-$OPTARG'\n$(try_help)"
 			;;
 	esac
 done
 
-# Check for errors
-#validate_opt
+# Check for errors in opt
+validate_opt
+
+string_merge_gtf="$output_dir/$STRING_MERGE_GTF"
+chimeric_most_shared_tsv="$output_dir/$CHIMERIC_MOST_SHARED_TSV"
+chimeric_info_tsv="$output_dir/$CHIMERIC_INFO_TSV"
+coding_classification_tsv="$output_dir/$CODING_CLASSIFICATION_TSV"
+pfam_info_dom_tsv="$output_dir/$PFAM_INFO_DOM_TSV"
+expression_expression_tsv="$output_dir/$EXPRESSION_EXPRESSION_TSV"
+
+# Check for errors in dep
 validate_dep
 
 # MAIN
 
-# Just in case
-mkdir -p "$output_dir/tmp"
+# Output dir concerning this command
+cod="$output_dir/$CMD_NAME"
 
-> "$output_dir/tmp/$prefix.nsamplespertranscript.tsv"
+# Create the base
+mkdir -p "$cod"
+
+# Create a temp dir
+tdir=$(mktemp -d)
+
+# Remove it automagicly
+trap 'rm -rf "$tdir"' EXIT
+
+> "$tdir/nsamplespertranscript.tsv"
 
 log_info "Step1"
-for i in $(cut -f 1 "$output_dir/$prefix.most_shared.tsv" | sort -u); do
-	n_samples=$(grep -w "$i" "$output_dir/$prefix/expression.tsv" \
+for i in $(cut -f 1 "$chimeric_most_shared_tsv" | sort -u); do
+	n_samples=$(grep -w "$i" "$expression_expression_tsv" \
 		| tr -t '\t' '\n' \
 		| awk '{if ($1 > 0) print}' \
 		| grep -v MSTRG \
 		| wc -l)
-	echo -e $i'\t'$n_samples >> "$output_dir/tmp/$prefix.nsamplespertranscript.tsv"
-done
+	echo -e "$i\t$n_samples"
+done > "$tdir/nsamplespertranscript.tsv"
 
 log_info "Step2"
 Rscript "$BIN_DIR/../scripts/median.R" \
-	"$output_dir/$prefix/expression.tsv" \
-	"$output_dir/$prefix/median.tsv"
+	"$expression_expression_tsv" \
+	"$cod/median.tsv" \
+	|| log_error "median.R failed"
 
 awk -F '.' '{print $0"\t"$1"."$2}' \
-	"$output_dir/$prefix.most_shared.tsv" \
-	> "$output_dir/tmp/$prefix.most_shared.tsv"
+	"$chimeric_most_shared_tsv" \
+	> "$tdir/most_shared.tsv"
 
 #Colocar uma coluna 4 com o id_gene não so o id_trans (MSTRG.X além de MSTRG.X.Y)
 log_info "Step3"
-> "$output_dir/tmp/$prefix.host_expression"
-> "$output_dir/tmp/$prefix.chimeric_expression"
-> "$output_dir/tmp/$prefix.psi.tsv"
+> "$tdir/host_expression"
+> "$tdir/chimeric_expression"
+> "$tdir/psi.tsv"
 
-for i in $(cut -f 4 "$output_dir/tmp/$prefix.most_shared.tsv" | sort -u); do
+for i in $(cut -f 4 "$tdir/most_shared.tsv" | sort -u); do
 	head -n1 \
-		"$output_dir/$prefix/expression.tsv" \
-		> "$output_dir/tmp/$prefix.chimeric_expression"
+		"$expression_expression_tsv" \
+		> "$tdir/chimeric_expression"
 
 	head -n1 \
-		"$output_dir/$prefix/expression.tsv" \
-		> "$output_dir/tmp/$prefix.host_expression"
+		"$expression_expression_tsv" \
+		> "$tdir/host_expression"
 
+	# Redundante filtrar em most_shared lendo o próprio most_shared?
 	grep -w "$i" \
-		"$output_dir/tmp/$prefix.most_shared.tsv" \
+		"$tdir/most_shared.tsv" \
 		| cut -f 1 \
-		| fgrep -wf - "$output_dir/$prefix/expression.tsv" \
-		>> "$output_dir/tmp/$prefix.chimeric_expression"
+		| fgrep -wf - "$expression_expression_tsv" \
+		>> "$tdir/chimeric_expression"
 
-	grep -w "$i" "$output_dir/tmp/$prefix.most_shared.tsv" \
+	grep -w "$i" "$tdir/most_shared.tsv" \
 		| cut -f 2 \
-		| fgrep -wf - "$output_dir/${prefix}.merge.gtf" \
+		| fgrep -wf - "$string_merge_gtf" \
 		| fgrep -v exon \
 		| awk -F '"' '{print $4}' \
-		| fgrep -wf - "$output_dir/$prefix/expression.tsv" \
-		>> "$output_dir/tmp/$prefix.host_expression"
+		| fgrep -wf - "$expression_expression_tsv" \
+		>> "$tdir/host_expression"
 
 	Rscript "$BIN_DIR/../scripts/psi.R" \
-		"$output_dir/tmp/$prefix.host_expression" \
-		"$output_dir/tmp/$prefix.chimeric_expression" \
+		"$tdir/host_expression" \
+		"$tdir/chimeric_expression" \
 		"$i" \
-		>> "$output_dir/tmp/$prefix.psi.tsv"
-done
-
-rm "$output_dir/tmp/$prefix.chimeric_expression"
-rm "$output_dir/tmp/$prefix.host_expression"
+		|| log_error "psi.R failed"
+done > "$tdir/psi.tsv"
 
 echo -e 'Id\tGene\tTranscript\tEvent_in\tSamples\tExpression_Median\tPsi\tCoding(?)\tObs' \
-	> "$output_dir/$prefix.results"
+	> "$cod/results"
 
 join \
-	<(sort -k1,1 "$output_dir/tmp/$prefix.most_shared.tsv") \
-	<(sort -k1,1 "$output_dir/$prefix.info.tsv" | cut -f 1,5) \
+	<(sort -k1,1 "$tdir/most_shared.tsv") \
+	<(sort -k1,1 "$chimeric_info_tsv" | cut -f 1,5) \
 	| sed 's/Novel //g' \
 	| join \
 		- \
-		<(sort -k1,1 "$output_dir/tmp/$prefix.nsamplespertranscript.tsv") \
+		<(sort -k1,1 "$tdir/nsamplespertranscript.tsv") \
 	| join \
 		- \
-		<(sed 's/"//g' "$output_dir/$prefix/median.tsv" | sort -k1,1) \
+		<(sed 's/"//g' "$cod/median.tsv" | sort -k1,1) \
 	| sort -k4,4 \
 	| join -1 4 -2 1 \
 		- \
-		<(sort "$output_dir/tmp/$prefix.psi.tsv") \
+		<(sort "$tdir/psi.tsv") \
 	| sort -k2,2 \
 	| join -1 2 -2 1 \
 		- \
-		<(sort "$output_dir/$prefix.classification.tsv" | sort -k1,1 | awk '{if ($3 > 0.9) print $1"\tCoding"; else print $1"\tNon-Coding"}') \
+		<(sort "$coding_classification_tsv" | sort -k1,1 | awk '{if ($3 > 0.9) print $1"\tCoding"; else print $1"\tNon-Coding"}') \
 	| join -a 1 \
 		- \
-		<(sort "$output_dir/$prefix.info_dom.tsv" | cut -f 1,5 | sed 's/\ /espaco/g' | sort -k1,1) \
+		<(sort "$pfam_info_dom_tsv" | cut -f 1,5 | sed 's/\ /espaco/g' | sort -k1,1) \
 	| awk '{$2=""; print $0}' - \
 	| sed 's/\ /\t/g' \
 	| sed 's/espaco/\ /g' \
-	>> "$output_dir/$prefix.results"
+	>> "$cod/results"
 
 
-mkdir -p "$output_dir/$prefix/figures"
+mkdir -p "$cod/figures"
 
-for i in $(awk '{if ($2 >= 0.15) print $1}' "$output_dir/tmp/$prefix.psi.tsv" | sort -u) ; do
-	head -n1 "$output_dir/$prefix/expression.tsv" \
-		> "$output_dir/tmp/$prefix.chimeric_expression"
+for i in $(awk '{if ($2 >= 0.15) print $1}' "$tdir/psi.tsv" | sort -u) ; do
+	head -n1 "$expression_expression_tsv" \
+		> "$tdir/chimeric_expression"
 
-	head -n1 "$output_dir/$prefix/expression.tsv" \
-		> "$output_dir/tmp/$prefix.host_expression"
+	head -n1 "$expression_expression_tsv" \
+		> "$tdir/host_expression"
 
 	grep -w "$i" \
-		"$output_dir/$prefix.most_shared.tsv" \
+		"$chimeric_most_shared_tsv" \
 		| cut -f 1 \
-		| fgrep -wf - "$output_dir/$prefix/expression.tsv" \
-		>> "$output_dir/tmp/$prefix.chimeric_expression"
+		| fgrep -wf - "$expression_expression_tsv" \
+		>> "$tdir/chimeric_expression"
 
 	grep -w "$i" \
-		"$output_dir/$prefix.most_shared.tsv" \
+		"$chimeric_most_shared_tsv" \
 		| cut -f 3 \
-		| fgrep -wf - "$output_dir/$prefix/expression.tsv" \
-		>> "$output_dir/tmp/$prefix.host_expression"
+		| fgrep -wf - "$expression_expression_tsv" \
+		>> "$tdir/host_expression"
 
 	Rscript "$BIN_DIR/../scripts/boxplot_alt.R" \
-		"$output_dir/tmp/$prefix.host_expression" \
-		"$output_dir/tmp/$prefix.chimeric_expression" \
-		"$output_dir/$prefix/figures/$i.svg"
+		"$tdir/host_expression" \
+		"$tdir/chimeric_expression" \
+		"$cod/figures/$i.svg" \
+		|| log_error "boxplot_alt.R failed"
 done
-
-rm "$output_dir/tmp/$prefix.chimeric_expression"
-rm "$output_dir/tmp/$prefix.host_expression"
 
 log_info "Done"
