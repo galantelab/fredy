@@ -19,6 +19,9 @@ SCRIPT_NAME="${0##*/}"
 # Command name
 CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
 
+# Dep files: string
+STRING_MERGE_GTF="string/merge.gtf"
+
 usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
@@ -26,6 +29,38 @@ usage() {
 }
 
 validate_opt() {
+	local bam
+
+	# Mandatory options '-o' and '-f'
+	if [[ -z "$output_dir" ]]; then
+		error "Missing '-o' option\n$(try_help)"
+	elif [[ ! -d "$output_dir" ]]; then
+		error "No such dir '$output_dir'.\nStart" \
+			"your analysis from '$PROG_NAME string'"
+	fi
+
+	# If there is no fastq test for args
+	# Then, check for valid bam files
+	if [[ -z "$fastq" ]]; then
+		if [[ "${#bams[@]}" == 0 ]]; then
+			error "Neither '-f' option nor BAM file were passed\n$(try_help)"
+		fi
+		for bam in "${bams[@]}"; do
+			if [[ ! -f "$bam" ]]; then
+				error "No such file '$bam'"
+			fi
+		done
+	elif [[ ! -f "$fastq" ]]; then
+		error "No such file '$fastq'"
+	else
+		while read bam; do
+			if [[ ! -f "$bam" ]]; then
+				error "No such file '$bam'"
+			fi
+		done < "$fastq"
+	fi
+
+	# Options
 	if [[ ! "$experiment" =~ ^(short|long)$ ]]; then
 		error "'$experiment' is not a valid '-e' option\n$(try_help)"
 	fi
@@ -33,39 +68,35 @@ validate_opt() {
 	if [[ ! "$threads" =~ ^[0-9]+$ ]] || [[ "$threads" -lt 1 ]]; then
 		error "'$threads' is not a valid '-t' option\n$(try_help)"
 	fi
-
-	# Mandatory options '-f'
-	if [[ -z "$fastq" ]]; then
-		error "Missing '-f' option\n$(try_help)"
-	fi
-
-	if [[ ! -f "$fastq" ]]; then
-		error "No such file '$fastq'"
-	fi
 }
 
 validate_dep() {
-	if [[ ! -f "$output_dir/$prefix.merge.gtf" ]]; then
-		error "'$output_dir/$prefix.merge.gtf' not found. Maybe you need to run '$PROG_NAME string' before"
+	if [[ ! -f "$string_merge_gtf" ]]; then
+		error "'$string_merge_gtf' not found.\nMaybe" \
+			"you need to run '$PROG_NAME string' before"
 	fi
 }
 
 # Options
-prefix="out"
-output_dir="."
+output_dir=""
 threads=1
 experiment="short"
 fastq="" # Os BAMS estão em fastq?
+bams=()
 
-# Processed options
+# Processing variables
+cod="" # Current output dir
+tdir=""
 paramet="-e" # for 'short'
+stringtie_nprocs=2
 jobs=1
 arq=""
 end=
+string_merge_gtf=""
 
 [[ $# == 0 ]] && { usage; exit; }
 
-while getopts ":ho:p:f:t:e:" OPTION; do
+while getopts ":ho:f:t:e:" OPTION; do
 	case "$OPTION" in
 		h)
 			usage
@@ -73,9 +104,6 @@ while getopts ":ho:p:f:t:e:" OPTION; do
 			;;
 		o)
 			output_dir="$OPTARG"
-			;;
-		p)
-			prefix="$OPTARG"
 			;;
 		f)
 			fastq="$OPTARG"
@@ -92,52 +120,110 @@ while getopts ":ho:p:f:t:e:" OPTION; do
 	esac
 done
 
-# Check for errors
+# Get the files if they were passed as arg
+shift $(($OPTIND - 1))
+bams=("$@")
+
+# Check for errors in opt
 validate_opt
+
+# Set the dep files paths
+string_merge_gtf="$output_dir/$STRING_MERGE_GTF"
+
+# Check for errors in dep
 validate_dep
 
 # MAIN
+
+# Load all files from $fastq file to $bams=()
+if [[ -n "$fastq" ]]; then
+	# Reset bams=() - just in case
+	bams=()
+	while read; do
+		bams+=("$REPLY")
+	done < "$fastq"
+fi
 
 if [[ "$experiment" == "long" ]]; then
 	paramet+=" -L"
 fi
 
-# Se jobs == 1, a divisão dará 0?
-jobs=$(awk -v threads=$threads '{print int(threads/2)}' <(echo "."))
+# The max number of jobs is threads, then
+# set stringtie_nprocs and jobs accordingly
+if (( threads < stringtie_nprocs )); then
+	stringtie_nprocs=$threads
+else
+	jobs=$(( threads / stringtie_job ))
+fi
 
-# Em vez de criar umas pasta nova, usar o $prefix como
-# o prefix dos novos arquivos na pasta $output_dir
-mkdir -p "$output_dir/$prefix"
+# Output dir concerning this command
+cod="$output_dir/$CMD_NAME"
+
+# Create the base
+mkdir -p "$cod"
+
+# Create a temp dir
+tdir=$(mktemp -d)
+
+# Remove it automagicly
+trap 'rm -rf "$tdir"' EXIT
 
 log_info "Performing expression"
-for i in $(cat "$fastq"); do
-	echo "stringtie $i.bam $paramet -G $output_dir/$prefix.merge.gtf -p 2 -o $output_dir/$prefix/${i/*\/}_exp.gtf"
-done | parallel -j $jobs
+parallel \
+	--max-procs=$jobs \
+	--joblog="$cod/stringtie_job.log" \
+	stringtie \
+		'{}' \
+		"$paramet" \
+		-G "$string_merge_gtf" \
+		-p $stringtie_nprocs \
+		-o "$cod"/'{/.}'.gtf \
+		'2>' "$cod"/'{/.}'.gtf.log \
+	::: "${bams[@]}"
+
+if [[ "$?" -ne 0 ]]; then
+	log_error \
+		"stringtie failed:" \
+		"See '$(readlink -f "$cod/stringtie_job.log")'" \
+		"for more details"
+fi
 
 log_info 'Merging samples ...'
-for i in $(cat "$fastq"); do
-	echo "awk -v OFS='\t' '{if (\$12 ~/ENST/ && \$3 == \"transcript\") print \$10,\$12,\$20; else if (\$12 ~/MSTRG/ && \$3 == \"transcript\") print \$10,\$12,\$18}' $output_dir/$prefix/${i/*\/}_exp.gtf | sed 's/;//g' | sed 's/\"//g' | sort -k1,1 > $output_dir/$prefix/${i/*\/}_exp.tsv"
-done | parallel -j $jobs
+parallel \
+	--max-procs=$jobs \
+	--joblog="$cod/merge_job.log" \
+	awk -v OFS='\t' '{if ($12 ~/ENST/ && $3 == "transcript") print $10,$12,$20; else if ($12 ~/MSTRG/ && $3 == "transcript") print $10,$12,$18}' \
+	'{}' \
+	'|' sed 's/;//g' \
+	'|' sed 's/\"//g' \
+	'|' sort -k1,1 \
+	'>' "$cod"/'{/.}'.tsv \
+	::: "$cod"/*.gtf
 
-paste \
-	<(echo 'transcript_id') \
-	<(cat "$fastq" | awk -F'/' '{print $NF}' \
-	| tr -t '\n' '\t' \
-	| sed 's/\t$//1') \
-	> "$output_dir/tmp/$prefix.header.tsv"
+if [[ "$?" -ne 0 ]]; then
+	log_error \
+		"parallel failed when merging samples:"
+		"See '$(readlink -f "$cod/merge_job.log")'" \
+		"for more details"
+fi
+
+# Create header
+printf '\t%s' 'transcript_id' "${bams[@]}" \
+	| cut -f 2- \
+	> "$tdir/header.tsv"
 
 # Ele pega o primeiro da expansão do wildcard?
-arq=$(ls "$output_dir/$prefix"/*_exp.tsv | head -n1)
-cut -f 2 "$arq" > "$output_dir/tmp/$prefix.transcript_id.tsv"
+arq=$(ls "$cod"/*.tsv | head -n1)
+cut -f 2 "$arq" > "$tdir/transcript_id.tsv"
 
-end=$(( 3 * $(ls "$output_dir/$prefix"/*_exp.tsv | wc -l) ))
-paste "$output_dir/$prefix"/*_exp.tsv \
+end=$(( 3 * $(ls "$cod"/*.tsv | wc -l) ))
+paste "$cod"/*.tsv \
 	| cut -f $(seq -s, 3 3 $end) \
-	> "$output_dir/tmp/$prefix.expression.tsv"
+	> "$tdir/expression.tsv"
 
 cat \
-	"$output_dir/tmp/$prefix.header.tsv" \
-	<(paste "$output_dir/tmp/$prefix.transcript_id.tsv" "$output_dir/tmp/$prefix.expression.tsv") \
-	> "$output_dir/$prefix/expression.tsv"
+	"$tdir/header.tsv" \
+	<(paste "$tdir/transcript_id.tsv" "$tdir/expression.tsv") \
+	> "$cod/expression.tsv"
 
 log_info "Done"
