@@ -31,6 +31,13 @@ usage() {
 
 validate_opt() {
 	# Mandatory option '-o' and '-M'
+	if [[ -z "$output_dir" ]]; then
+		error "Missing '-o' option\n$(try_help)"
+	elif [[ ! -d "$output_dir" ]]; then
+		error "No such dir '$output_dir'.\nStart" \
+			"your analysis from '$PROG_NAME string'"
+	fi
+
 	if [[ -z "$pfam_model" ]]; then
 		error "Missing '-M' option\n$(try_help)"
 	elif [[ ! -f "$pfam_model" ]]; then
