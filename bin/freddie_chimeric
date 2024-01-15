@@ -31,7 +31,7 @@ usage() {
 }
 
 validate_opt() {
-	# Mandatory options '-o' '-g', '-G' and '-i'
+	# Mandatory options '-o', '-g', '-G' and '-i'
 	if [[ -z "$output_dir" ]]; then
 		error "Missing '-o' option\n$(try_help)"
 	elif [[ ! -d "$output_dir" ]]; then
@@ -271,6 +271,10 @@ cut -f 1 "$cod/info.tsv" \
 gffread "$cod/chimeric.gtf" \
 	-g "$genome" \
 	-w "$cod/chimeric.fasta" \
-	|| log_error "gffread returned an error"
+	2> "$cod/chimeric.fasta.log" \
+	|| log_error \
+		"gffread failed:" \
+		"See '$(readlink -f "$cod/chimeric.fasta.log")'" \
+		"for more details"
 
 log_info "Done"
