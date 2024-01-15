@@ -21,6 +21,11 @@ SCRIPT_NAME="${0##*/}"
 # Command name
 CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
 
+# Dep files: chimeric
+CHIMERIC_FASTA="chimeric/chimeric.fasta"
+CHIMERIC_MOST_SHARED_TSV="chimeric/most_shared.tsv"
+
+
 usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
@@ -28,45 +33,54 @@ usage() {
 }
 
 validate_opt() {
-	# Mandatory options '-m' and '-d'
+	# Mandatory options '-o', '-m' and '-d'
+	if [[ -z "$output_dir" ]]; then
+		error "Missing '-o' option\n$(try_help)"
+	elif [[ ! -d "$output_dir" ]]; then
+		error "No such dir '$output_dir'.\nStart" \
+			"your analysis from '$PROG_NAME string'"
+	fi
+
 	if [[ -z "$model" ]]; then
 		error "Missing '-m' option\n$(try_help)"
+	elif [[ ! -f "$model" ]]; then
+		error "No such file '$model'"
 	fi
 
 	if [[ -z "$protein_db" ]]; then
 		error "Missing '-d' option\n$(try_help)"
-	fi
-
-	if [[ ! -f "$model" ]]; then
-		error "No such file '$model'"
-	fi
-
-	if [[ ! -f "$protein_db" ]]; then
+	elif [[ ! -f "$protein_db" ]]; then
 		error "No such file '$protein_db'"
 	fi
 }
 
 validate_dep() {
-	# O chimeric.fasta deve ser passado pelo usuário ou
-	# ser localizado pelo output_dir e prefix?
-	if [[ ! -f "$output_dir/$prefix.chimeric.fasta" ]]; then
-		error "'$output_dir/$prefix.chimeric.fasta' not found. Maybe you need to run '$PROG_NAME chimeric' before"
+	# chimeric
+	if [[ ! -f "$chimeric_fasta" ]]; then
+		error "'$chimeric_fasta' not found\n.Maybe" \
+			"you need to run '$PROG_NAME chimeric' before"
 	fi
 
-	if [[ ! -f "$output_dir/$prefix.most_shared.tsv" ]]; then
-		error "'$output_dir/$prefix.most_shared.tsv' not found. Maybe you need to run '$PROG_NAME chimeric' before"
+	if [[ ! -f "$chimeric_most_shared_tsv" ]]; then
+		error "'$chimeric_most_shared_tsv' not found\n.Maybe" \
+			"you need to run '$PROG_NAME chimeric' before"
 	fi
 }
 
 # Options
-prefix="out"
-output_dir="."
+output_dir=""
 model=""
 protein_db=""
 
+# Processing variables
+cod="" # Current output dir
+tdir=""
+chimeric_fasta=""
+chimeric_most_shared_tsv=""
+
 [[ $# == 0 ]] && { usage; exit; }
 
-while getopts ":ho:p:m:d:" OPTION; do
+while getopts ":ho:m:d:" OPTION; do
 	case "$OPTION" in
 		h)
 			usage
@@ -74,9 +88,6 @@ while getopts ":ho:p:m:d:" OPTION; do
 			;;
 		o)
 			output_dir="$OPTARG"
-			;;
-		p)
-			prefix="$OPTARG"
 			;;
 		m)
 			model="$OPTARG"
@@ -90,52 +101,83 @@ while getopts ":ho:p:m:d:" OPTION; do
 	esac
 done
 
-# Check for errors
+# Check for errors in opt
 validate_opt
+
+# Set the dep files paths
+chimeric_fasta="$output_dir/$CHIMERIC_FASTA"
+chimeric_most_shared_tsv="$output_dir/$CHIMERIC_MOST_SHARED_TSV"
+
+# Check for errors in dep
 validate_dep
 
 # MAIN
 
-# Just in case
-mkdir -p "$output_dir/tmp"
+# Output dir concerning this command
+cod="$output_dir/$CMD_NAME"
+
+# Create the base
+mkdir -p "$cod"
+
+# Create a temp dir
+tdir=$(mktemp -d)
+
+# Remove it automagicly
+trap 'rm -rf "$tdir"' EXIT
 
 #Rodar o RNASamba
 log_info "Running RNASamba"
 
+# predicted_proteins.fa e chimeric.fasta?
 rnasamba classify \
-	-p "$output_dir/$prefix.predicted_proteins.fa" \
-	"$output_dir/$prefix.classification.tsv" \
-	"$output_dir/$prefix.chimeric.fasta" \
-	"$model"
+	-p "$cod/predicted_proteins.fa" \
+	"$cod/classification.tsv" \
+	"$chimeric_fasta" \
+	"$model" \
+	2> "$cod/classification.tsv.log" \
+	|| log_error \
+		"rnasamba failed:"
+		"See '$(readlink -f "$cod/classification.tsv.log")'" \
+		"for more details"
 
 #Movendo os resultados do RNASamba para o output
-#mv ann/$prefix.* output/
+#mv ann/* output/
 
 #Selecionando somente os transcritos dos protein_coding com protencial codificante
 log_info "Selecting chimeric transcripts with coding potential"
-awk '{if ($3 >= 0.9) print $1}' "$output_dir/$prefix.classification.tsv" \
-	| sed 1d | grep -wf - "$output_dir/$prefix.most_shared.tsv" \
+awk '{if ($3 >= 0.9) print $1}' "$cod/classification.tsv" \
+	| sed 1d | grep -wf - "$chimeric_most_shared_tsv" \
 	| cut -d . -f 1,2,3 \
 	| sort -u \
 	| awk '{print $2"\t"$1}' \
 	| cut -d . -f 1,2 \
 	|  awk '{print $2"\t"$1}' \
-	> "$output_dir/tmp/$prefix.coding.txt"
+	> "$tdir/coding.txt"
 
-awk '{if ($3 >= 0.9) print $1}' "$output_dir/$prefix.classification.tsv" \
+awk '{if ($3 >= 0.9) print $1}' "$cod/classification.tsv" \
 	| sed 1d \
 	| awk -F'.' '{print $1"."$2"."$3" gene="$1"."$2}' \
-	> "$output_dir/tmp/$prefix.transcript.txt"
+	> "$tdir/transcript.txt"
 
 #Selecionando a sequencia de AA dos respectivos.
 seqtk subseq \
-	"$output_dir/$prefix.predicted_proteins.fa" \
-	"$output_dir/tmp/$prefix.transcript.txt" \
-	> "$output_dir/$prefix.novel_proteins.fa"
+	"$cod/predicted_proteins.fa" \
+	"$tdir/transcript.txt" \
+	> "$cod/novel_proteins.fa" \
+	2> "$cod/novel_proteins.fa.log" \
+	|| log_error \
+		"seqtk failed:"
+		"See '$(readlink -f "$cod/novel_proteins.fa.log")'" \
+		"for more details"
 
 seqtk subseq \
 	"$protein_db" \
-	<(cut -f 2 "$output_dir/tmp/$prefix.coding.txt") \
-	> "$output_dir/$prefix.ann_proteins.fa"
+	<(cut -f 2 "$tdir/coding.txt") \
+	> "$cod/ann_proteins.fa" \
+	2> "$cod/novel_proteins.fa.log" \
+	|| log_error \
+		"seqtk failed:"
+		"See '$(readlink -f "$cod/novel_proteins.fa.log")'" \
+		"for more details"
 
 log_info "Done"
