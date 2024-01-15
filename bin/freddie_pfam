@@ -17,6 +17,12 @@ SCRIPT_NAME="${0##*/}"
 # Command name
 CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
 
+# Dep files: coding
+CODING_NOVEL_PROTEINS_FASTA="coding/novel_proteins.fa"
+CODING_ANN_PROTEINS_FASTA="coding/ann_proteins.fa"
+CODING_TRANSCRIPT_TXT="coding/transcript.txt"
+CODING_CODING_TXT="coding/coding.txt"
+
 usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
@@ -24,34 +30,51 @@ usage() {
 }
 
 validate_opt() {
-	# Mandatory option 'M'
+	# Mandatory option '-o' and '-M'
 	if [[ -z "$pfam_model" ]]; then
 		error "Missing '-M' option\n$(try_help)"
-	fi
-
-	if [[ ! -f "$pfam_model" ]]; then
+	elif [[ ! -f "$pfam_model" ]]; then
 		error "No such file '$pfam_model'"
 	fi
 }
 
 validate_dep() {
-	if [[ ! -f "$output_dir/$prefix.novel_proteins.fa" ]]; then
-		error "'$output_dir/$prefix.novel_proteins.fa' not found. Maybe you need to run '$PROG_NAME coding' before"
+	if [[ ! -f "$coding_novel_proteins_fasta" ]]; then
+		error "'$coding_novel_proteins_fasta' not found.\nMaybe" \
+			"you need to run '$PROG_NAME coding' before"
 	fi
 
-	if [[ ! -f "$output_dir/$prefix.ann_proteins.fa" ]]; then
-		error "'$output_dir/$prefix.ann_proteins.fa' not found. Maybe you need to run '$PROG_NAME coding' before"
+	if [[ ! -f "$coding_ann_proteins_fasta" ]]; then
+		error "'$coding_ann_proteins_fasta' not found.\nMaybe" \
+			"you need to run '$PROG_NAME coding' before"
+	fi
+
+	if [[ ! -f "$coding_transcript_txt" ]]; then
+		error "'$coding_transcript_txt' not found.\nMaybe" \
+			"you need to run '$PROG_NAME coding' before"
+	fi
+
+	if [[ ! -f "$coding_coding_txt" ]]; then
+		error "'$coding_coding_txt' not found.\nMaybe" \
+			"you need to run '$PROG_NAME coding' before"
 	fi
 }
 
 # Options
-prefix="out"
-output_dir="."
+output_dir=""
 pfam_model=""
+
+# Processing variables
+cod="" # Current output dir
+tdir=""
+coding_novel_proteins_fasta=""
+coding_ann_proteins_fasta=""
+coding_transcript_txt=""
+coding_coding_txt=""
 
 [[ $# == 0 ]] && { usage; exit; }
 
-while getopts ":ho:p:M:" OPTION; do
+while getopts ":ho:M:" OPTION; do
 	case "$OPTION" in
 		h)
 			usage
@@ -59,9 +82,6 @@ while getopts ":ho:p:M:" OPTION; do
 			;;
 		o)
 			output_dir="$OPTARG"
-			;;
-		p)
-			prefix="$OPTARG"
 			;;
 		M)
 			pfam_model="$OPTARG"
@@ -72,20 +92,37 @@ while getopts ":ho:p:M:" OPTION; do
 	esac
 done
 
-# Check for errors
+# Check for errors in opt
 validate_opt
+
+# Set the dep files paths
+coding_novel_proteins_fasta="$output_dir/$CODING_NOVEL_PROTEINS_FASTA"
+coding_ann_proteins_fasta="$output_dir/$CODING_ANN_PROTEINS_FASTA"
+coding_transcript_txt="$output_dir/$CODING_TRANSCRIPT_TXT"
+coding_coding_txt="$output_dir/$CODING_CODING_TXT"
+
+# Check for errors in dep
 validate_dep
 
 # MAIN
 
-# Just in case
-mkdir -p "$output_dir/tmp"
+# Output dir concerning this command
+cod="$output_dir/$CMD_NAME"
+
+# Create the base
+mkdir -p "$cod"
+
+# Create a temp dir
+tdir=$(mktemp -d)
+
+# Remove it automagicly
+trap 'rm -rf "$tdir"' EXIT
 
 log_info "Running PFAM..."
 cat \
-	"$output_dir/$prefix.novel_proteins.fa" \
-	"$output_dir/$prefix.ann_proteins.fa" \
-	> "$output_dir/tmp/pfam.$prefix.tmp"
+	"$coding_novel_proteins_fasta" \
+	"$coding_ann_proteins_fasta" \
+	> "$tdir/pfam.fa"
 
 # O usuário que passe o modelo?
 #if ! [ -f /home/ref/Pfam-A.hmm ]; then
@@ -94,54 +131,57 @@ cat \
 #	hmmpress /home/ref/Pfam-A.hmm
 #fi
 
+# --cpu e -E podem ser passado pelo usuário?
 hmmsearch \
-	--tblout "$output_dir/tmp/pfam.hmm.$prefix" \
+	--tblout "$cod/pfam.hmm" \
 	-E 1e-6 \
 	--cpu 4 \
 	"$pfam_model" \
-	"$output_dir/tmp/pfam.$prefix.tmp" \
-	> "$output_dir/tmp/log" 2> "$output_dir/tmp/log.err"
+	"$tdir/pfam.fa" \
+	> "$cod/pfam.hmm.stdout.log" \
+	2> "$cod/pfam.hmm.stderr.log" \
+	|| log_error \
+		"hmmsearch failed:" \
+		"See '$(readlink -f "$cod/pfam.hmm.stderr.log")'" \
+		"for more details"
 
 log_info "Comparing chimeric domains with host domains"
-sed -i "s/\ gene=/\t/g" "$output_dir/tmp/$prefix.transcript.txt"
+sed "s/\ gene=/\t/g" "$coding_transcript_txt" > "$tdir/transcript.txt"
 
 join -1 2 -2 1 \
-	<(sort -k2,2 "$output_dir/tmp/$prefix.transcript.txt") \
-	<(sort -k1,1 "$output_dir/tmp/$prefix.coding.txt") \
+	<(sort -k2,2 "$tdir/transcript.txt") \
+	<(sort -k1,1 "$coding_coding_txt") \
 	| sed 's/ /\t/g' \
-	> "$output_dir/tmp/$prefix.join.txt"
+	> "$tdir/join.txt"
 
 while read gene trans host; do
 	grep -w "$trans" \
-		"$output_dir/tmp/pfam.hmm.$prefix" \
-		> "$output_dir/tmp/$prefix.$trans.$host.txt"
+		"$cod/pfam.hmm" \
+		> "$tdir/$trans.$host.txt"
 
 	grep -w "$host" \
-		"$output_dir/tmp/pfam.hmm.$prefix" \
-		>> "$output_dir/tmp/$prefix.$trans.$host.txt"
+		"$cod/pfam.hmm" \
+		>> "$tdir/$trans.$host.txt"
 
-	grep -v \# "$output_dir/tmp/$prefix.$trans.$host.txt" \
+	grep -v '#' "$tdir/$trans.$host.txt" \
 		| awk -F" " '{print $1,$3,$6,$4}' \
-		> "$output_dir/tmp/$prefix.pfam.tmp"
+		> "$tdir/pfam.txt"
 
 	python3 "$BIN_DIR/../scripts/comp_dom.py" \
-		"$output_dir/tmp/$prefix.pfam.tmp" \
+		"$tdir/pfam.txt" \
 		"$trans" \
-		> "$output_dir/tmp/$prefix.$trans.$host.pfam.tsv"
-done < "$output_dir/tmp/$prefix.join.txt"
+		> "$tdir/$trans.$host.pfam.tsv" \
+		|| log_error "'comp_dom.py' failed"
+done < "$tdir/join.txt"
 
-for i in $(cut -f 2 "$output_dir/tmp/$prefix.transcript.txt"); do
-	cat "$output_dir/tmp/$prefix.$i".*.pfam.tsv \
-		| grep -v \# \
-		> "$output_dir/tmp/$prefix.$i.pfamf.tsv"
+# Talves esta parte possa ser simplificada para:
+# cat "$tdir"/*.pfam.tsv | grep -v '#' > "$cod/info_dom.tsv"?
+for trans in $(cut -f 2 "$tdir/transcript.txt"); do
+	cat "$tdir/$trans".*.pfam.tsv \
+		| grep -v '#' \
+		> "$tdir/$trans.pfamf.tsv"
 done
 
-cat "$output_dir/tmp/$prefix".*.pfamf.tsv \
-	> "$output_dir/$prefix.info_dom.tsv"
-
-rm "$output_dir/tmp"/$prefix*
-rm "$output_dir/tmp"/*$prefix*
-rm "$output_dir/tmp/$prefix.coding.txt"
-rm "$output_dir/tmp/$prefix.transcript.txt"
+cat "$tdir"/*.pfamf.tsv > "$cod/info_dom.tsv"
 
 log_info "Done"
