@@ -74,7 +74,6 @@ protein_db=""
 
 # Processing variables
 cod="" # Current output dir
-tdir=""
 chimeric_fasta=""
 chimeric_most_shared_tsv=""
 
@@ -119,12 +118,6 @@ cod="$output_dir/$CMD_NAME"
 # Create the base
 mkdir -p "$cod"
 
-# Create a temp dir
-tdir=$(mktemp -d)
-
-# Remove it automagicly
-trap 'rm -rf "$tdir"' EXIT
-
 #Rodar o RNASamba
 log_info "Running RNASamba"
 
@@ -152,17 +145,17 @@ awk '{if ($3 >= 0.9) print $1}' "$cod/classification.tsv" \
 	| awk '{print $2"\t"$1}' \
 	| cut -d . -f 1,2 \
 	|  awk '{print $2"\t"$1}' \
-	> "$tdir/coding.txt"
+	> "$cod/coding.txt"
 
 awk '{if ($3 >= 0.9) print $1}' "$cod/classification.tsv" \
 	| sed 1d \
 	| awk -F'.' '{print $1"."$2"."$3" gene="$1"."$2}' \
-	> "$tdir/transcript.txt"
+	> "$cod/transcript.txt"
 
 #Selecionando a sequencia de AA dos respectivos.
 seqtk subseq \
 	"$cod/predicted_proteins.fa" \
-	"$tdir/transcript.txt" \
+	"$cod/transcript.txt" \
 	> "$cod/novel_proteins.fa" \
 	2> "$cod/novel_proteins.fa.log" \
 	|| log_error \
@@ -172,7 +165,7 @@ seqtk subseq \
 
 seqtk subseq \
 	"$protein_db" \
-	<(cut -f 2 "$tdir/coding.txt") \
+	<(cut -f 2 "$cod/coding.txt") \
 	> "$cod/ann_proteins.fa" \
 	2> "$cod/novel_proteins.fa.log" \
 	|| log_error \
