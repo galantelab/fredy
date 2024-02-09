@@ -151,7 +151,7 @@ fi
 if (( threads < stringtie_nprocs )); then
 	stringtie_nprocs=$threads
 else
-	jobs=$(( threads / stringtie_job ))
+	jobs=$(( threads / stringtie_nprocs ))
 fi
 
 # Output dir concerning this command
@@ -166,7 +166,7 @@ parallel \
 	--joblog="$cod/stringtie_job.log" \
 	stringtie \
 		'{}' \
-		"$paramet" \
+		$paramet \
 		-G "$gtf" \
 		-p $stringtie_nprocs \
 		-o "$cod"/'{/.}'.gtf \
@@ -189,7 +189,7 @@ stringtie --merge \
 	2> "$cod/merge.gtf.log" \
 	|| log_error \
 		"stringtie --merge failed:" \
-		"See '$(readlink -f "$cod/merge.gtf.log")'"
+		"See '$(readlink -f "$cod/merge.gtf.log")'" \
 		"for more details"
 
 log_info "Done"
