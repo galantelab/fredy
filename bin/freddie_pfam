@@ -131,6 +131,13 @@ cat \
 	"$coding_ann_proteins_fasta" \
 	> "$tdir/pfam.fa"
 
+if [[ ! -s "$tdir/pfam.fa" ]]; then
+	log_error \
+		"The files '$(readlink -f "$coding_novel_proteins_fasta")'" \
+		"and '$(readlink -f "$coding_ann_proteins_fasta")'" \
+		"are empty. It will not continue with the analysis"
+fi
+
 # O usuário que passe o modelo?
 #if ! [ -f /home/ref/Pfam-A.hmm ]; then
 #	wget --directory-prefix=/home/ref/ ftp://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam31.0/Pfam-A.hmm.gz
@@ -162,33 +169,46 @@ join -1 2 -2 1 \
 	> "$tdir/join.txt"
 
 while read gene trans host; do
-	grep -w "$trans" \
+	awk -v t="$trans" -v h="$host" '
+		/^#/ {next}
+		$_ ~t || $_~h {
+			print $1,$3,$6,$4
+		}' \
 		"$cod/pfam.hmm" \
 		> "$tdir/$trans.$host.txt"
 
-	grep -w "$host" \
-		"$cod/pfam.hmm" \
-		>> "$tdir/$trans.$host.txt"
+	#grep -w "$trans" \
+		#"$cod/pfam.hmm" \
+		#> "$tdir/$trans.$host.txt"
 
-	grep -v '#' "$tdir/$trans.$host.txt" \
-		| awk -F" " '{print $1,$3,$6,$4}' \
-		> "$tdir/pfam.txt"
+	#grep -w "$host" \
+		#"$cod/pfam.hmm" \
+		#>> "$tdir/$trans.$host.txt"
 
+	#grep -v '#' "$tdir/$trans.$host.txt" \
+		#| awk -F" " '{print $1,$3,$6,$4}' \
+		#> "$tdir/pfam.txt"
+
+	#python3 "$BIN_DIR/../scripts/comp_dom.py" \
+		#"$tdir/$trans.$host.txt" \
+		#"$trans" \
+		#> "$tdir/$trans.$host.pfam.tsv" \
+		#|| log_error "'comp_dom.py' failed"
 	python3 "$BIN_DIR/../scripts/comp_dom.py" \
-		"$tdir/pfam.txt" \
+		"$tdir/$trans.$host.txt" \
 		"$trans" \
-		> "$tdir/$trans.$host.pfam.tsv" \
 		|| log_error "'comp_dom.py' failed"
-done < "$tdir/join.txt"
+done < "$tdir/join.txt" | sed '/^#/d' | sort -k1,1 > "$cod/info_dom.tsv"
 
-# Talves esta parte possa ser simplificada para:
-# cat "$tdir"/*.pfam.tsv | grep -v '#' > "$cod/info_dom.tsv"?
-for trans in $(cut -f 2 "$tdir/transcript.txt"); do
-	cat "$tdir/$trans".*.pfam.tsv \
-		| grep -v '#' \
-		> "$tdir/$trans.pfamf.tsv"
-done
+## Talves esta parte possa ser simplificada para:
+## cat "$tdir"/*.pfam.tsv | grep -v '#' > "$cod/info_dom.tsv"?
+#for trans in $(cut -f 2 "$tdir/transcript.txt"); do
+	#log_info ":: $trans"
+	#cat "$tdir/$trans".*.pfam.tsv \
+		#| grep -v '#' \
+		#> "$tdir/$trans.pfamf.tsv"
+#done
 
-cat "$tdir"/*.pfamf.tsv > "$cod/info_dom.tsv"
+#cat "$tdir"/*.pfamf.tsv > "$cod/info_dom.tsv"
 
 log_info "Done"
