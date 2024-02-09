@@ -146,6 +146,7 @@ trap 'rm -rf "$tdir"' EXIT
 log_info 'Finding new transcripts'
 
 # Dicionário de protein codings
+log_info "Generate '$tdir/dic.txt'"
 awk '{if ($3 == "CDS") print $10}' "$gtf" \
 	| sed 's/;\|"//g' \
 	| cut -d . -f 1 \
@@ -156,10 +157,12 @@ awk '{if ($3 == "CDS") print $10}' "$gtf" \
 	| cut -d . -f 1 > "$tdir/dic.txt"
 
 #Filtro de transcritos anotados
+log_info "Generate '$cod/novels.gtf'"
 fgrep "transcript_id \"MSTRG" \
 	"$string_merge_gtf" > "$cod/novels.gtf"
 
 #Pegando os exons dos novos transcritos
+log_info "Generate '$tdir/novels_exon.bed'"
 awk -F "\t" '{if ($3 == "exon" && $1 ~/chr/) print $1"\t"$4"\t"$5"\t"$9}' \
 	"$cod/novels.gtf" \
 	| sort -k1,1 -k2,2n \
@@ -167,7 +170,9 @@ awk -F "\t" '{if ($3 == "exon" && $1 ~/chr/) print $1"\t"$4"\t"$5"\t"$9}' \
 
 #Lista dos transcritos novos que tem RTC
 log_info 'Finding chimeric transcripts'
-bedtools intersect "$paramet" -f 0.5 -wo \
+
+log_info "Generate '$cod/chimeric.txt'"
+bedtools intersect $paramet -f 0.5 -wo \
 	-a "$input" \
 	-b "$tdir/novels_exon.bed" \
 	| cut -f 4,8 \
@@ -181,23 +186,27 @@ bedtools intersect "$paramet" -f 0.5 -wo \
 	> "$cod/chimeric.txt"
 
 #Montando um gtf dos transcritos novos anotados pelo stringtie
+log_info "Generate '$cod/protein.gtf'"
 fgrep -w \
 	-f <(cut -f 1 "$cod/chimeric.txt") \
 	"$string_merge_gtf" \
 	> "$cod/protein.gtf"
 
 #Montando um gtf e um bed com possiveis transcritos quiméricos
+log_info "Generate '$tdir/chimeric_dic.gtf'"
 grep -w \
 	-f "$tdir/dic.txt" \
 	"$cod/protein.gtf" \
 	> "$tdir/chimeric_dic.gtf"
 
+log_info "Generate '$tdir/exon.bed'"
 grep -w exon \
 	"$tdir/chimeric_dic.gtf" \
 	| cut -f 1,4,5,9 \
 	> "$tdir/exon.bed"
 
 #Criando um bed com todos os transcritos ja anotados de protein_coding
+log_info "Generate '$tdir/partial.tsv'"
 awk '{if ($3 == "CDS") print $12}' "$gtf" \
 	| sed 's/;\|"//g' \
 	| sort -u \
@@ -213,6 +222,7 @@ awk '{if ($3 == "CDS") print $12}' "$gtf" \
 	> "$tdir/partial.tsv"
 
 > "$cod/most_shared.tsv"
+log_info "Generate '$cod/most_shared.tsv'"
 fgrep MSTRG "$tdir/partial.tsv" \
 	| awk -v OFS="\t" '{if ($1 > 1) print $1,$2,$3,$4}' \
 	| sort -k2,2 -k1,1nr \
@@ -222,52 +232,55 @@ fgrep MSTRG "$tdir/partial.tsv" \
 	| awk -F" " '{print $2"\t"$3"\t"$4}' \
 	> "$cod/most_shared.tsv"
 
+log_info "Generate '$tdir/chimeric.gtf'"
 fgrep -w \
 	-f <(cut -f 1 "$cod/most_shared.tsv" | sort -u) \
 	"$cod/protein.gtf" \
 	> "$tdir/chimeric.gtf"
 
 #Classificando internal initial e final
+log_info "Generate '$tdir/info_bed_novel.txt'"
 python3 "$BIN_DIR/../scripts/bed_novel.py" \
 	"$tdir/chimeric.gtf" \
 	> "$tdir/info_bed_novel.txt" \
 	|| log_error "'bed_novel.py' failed"
 
+log_info "Generate '$tdir/joined.txt'"
 sed 's/\\//g' "$cod/chimeric.txt" \
 	> "$tdir/joined.txt"
 
+log_info "Generate '$tdir/info.tsv'"
 join \
 	<(sort -k1,1 -k2,2n "$tdir/info_bed_novel.txt") \
 	<(sort -k1,1 -k2,2n "$tdir/joined.txt") \
-	| awk -F " " '{if ($3 == $4 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
-		else if ($3 == $4 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
-		else if ($4 == 1 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; \
-		else if ($4 == 1 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; \
-		else print $1"\t"$2"\t"$3"\t"$4"\tNovel Internal"}' \
+	| awk -F " " '{if ($3 == $4 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; else if ($3 == $4 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; else if ($4 == 1 && $2 == "+") print $1"\t"$2"\t"$3"\t"$4"\tNovel Initial"; else if ($4 == 1 && $2 == "-") print $1"\t"$2"\t"$3"\t"$4"\tNovel Final"; else print $1"\t"$2"\t"$3"\t"$4"\tNovel Internal"}' \
 	> "$tdir/info.tsv"
 
-grep -v \
-	-f <(cut -f 1 "$tdir/info.tsv" \
-	| uniq -c \
-	| awk '{if ($1 > 1) print $2}') "$tdir/info.tsv" \
-	> "$cod/info.tsv"
+log_info "Generate '$cod/info.tsv'"
+awk 'NR==FNR{v[$1]++;u[$1$4]++;next} v[$1]==1 || u[$1$4]>1' \
+	"$tdir/info.tsv" "$tdir/info.tsv" > "$cod/info.tsv"
+#grep -v \
+	#-f <(cut -f 1 "$tdir/info.tsv" | uniq -c | awk '{if ($1 > 1) print $2}') \
+	#"$tdir/info.tsv" \
+	#> "$cod/info.tsv"
 
-grep \
-	-f <(cut -f 1,4 "$tdir/info.tsv" \
-	| uniq -c \
-	| awk '{if ($1 > 1) print $2}') "$tdir/info.tsv" \
-	>> "$cod/info.tsv"
+#log_info "Append to '$cod/info.tsv'"
+#grep \
+	#-f <(cut -f 1,4 "$tdir/info.tsv" | uniq -c | awk '{if ($1 > 1) print $2}') \
+	#"$tdir/info.tsv" \
+	#>> "$cod/info.tsv"
 
+log_info "Generate '$cod/chimeric.gtf'"
 cut -f 1 "$cod/info.tsv" \
 	| fgrep -wf - "$tdir/chimeric.gtf" \
 	| awk -F \" '{print $4"\t"$0}' \
 	| sort -k1,1 -k4,4r \
 	| join - <(sort -k1,1 "$cod/chimeric.txt") \
-	| awk -v OFS="\t" -F ' ' '{if ($4 == "transcript") print $2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" chimeric_event \""$15"\"; chimeric_exon_number \""$14"\";"; \
-		else print$2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" "$14" "$15}' \
+	| awk -v OFS="\t" -F ' ' '{if ($4 == "transcript") print $2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" chimeric_event \""$15"\"; chimeric_exon_number \""$14"\";"; else print$2,$3,$4,$5,$6,$7,$8,$9,$10" "$11" "$12" "$13" "$14" "$15}' \
 	> "$cod/chimeric.gtf"
 
 #Arquivo fasta dos possiveis transcritos quimericos do stringtie
+log_info "Generate '$cod/chimeric.fasta'"
 gffread "$cod/chimeric.gtf" \
 	-g "$genome" \
 	-w "$cod/chimeric.fasta" \
