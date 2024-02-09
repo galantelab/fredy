@@ -144,6 +144,9 @@ if [[ -n "$fastq" ]]; then
 	done < "$fastq"
 fi
 
+# Sort bams=()
+bams=($(printf "%s\0" "${bams[@]}" | sort -z | xargs -0n1))
+
 if [[ "$experiment" == "long" ]]; then
 	paramet+=" -L"
 fi
@@ -153,7 +156,7 @@ fi
 if (( threads < stringtie_nprocs )); then
 	stringtie_nprocs=$threads
 else
-	jobs=$(( threads / stringtie_job ))
+	jobs=$(( threads / stringtie_nprocs ))
 fi
 
 # Output dir concerning this command
@@ -189,23 +192,49 @@ if [[ "$?" -ne 0 ]]; then
 fi
 
 log_info 'Merging samples ...'
+#parallel \
+	#--max-procs=$jobs \
+	#--joblog="$cod/merge_job.log" \
+	#awk -v OFS='\t' '
+		#{
+			#if ($12 ~/ENST/ && $3 == "transcript")
+				#print $10,$12,$20;
+			#else if ($12 ~/MSTRG/ && $3 == "transcript")
+				#print $10,$12,$18
+		#}' \
+	#'{}' \
+	#'|' sed 's/;//g' \
+	#'|' sed 's/\"//g' \
+	#'|' sort -k1,1 \
+	#'>' "$cod"/'{/.}'.tsv \
+	#::: "$cod"/*.gtf
+merge_sample() {
+	awk -v OFS='\t' '
+		$3 == "transcript" {
+			gsub(/[;"]/,"");
+			if ($12 ~/ENST/)
+				print $10,$12,$20
+			else if ($12 ~/MSTRG/)
+				print $10,$12,$18
+		}' "$1" | sort -k1,1
+}
+
+export -f merge_sample
+
 parallel \
 	--max-procs=$jobs \
 	--joblog="$cod/merge_job.log" \
-	awk -v OFS='\t' '{if ($12 ~/ENST/ && $3 == "transcript") print $10,$12,$20; else if ($12 ~/MSTRG/ && $3 == "transcript") print $10,$12,$18}' \
-	'{}' \
-	'|' sed 's/;//g' \
-	'|' sed 's/\"//g' \
-	'|' sort -k1,1 \
-	'>' "$cod"/'{/.}'.tsv \
+	merge_sample '{}' '>' "$cod"/'{/.}'.tsv \
 	::: "$cod"/*.gtf
 
 if [[ "$?" -ne 0 ]]; then
 	log_error \
-		"parallel failed when merging samples:"
+		"parallel failed when merging samples:" \
 		"See '$(readlink -f "$cod/merge_job.log")'" \
 		"for more details"
 fi
+
+##
 
 # Create header
 printf '\t%s' 'transcript_id' "${bams[@]}" \
