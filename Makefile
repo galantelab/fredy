@@ -6,7 +6,7 @@
 SHELL := bash
 
 # Get script version
-APP_VERSION := 	$(shell ./freddie -v)
+APP_VERSION := 	$(shell ./freddie --version)
 
 # Get VCS latest tag
 VCS_VERSION := $(shell git describe --abbrev=0 --tags)
