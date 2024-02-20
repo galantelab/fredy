@@ -16,38 +16,45 @@ VERSION='1.0.0-dev5'
 # Log functions
 
 ## Print: date info|error script [func]: message
-_template() {
+_log_template() {
 	local type="$1"; shift
 	local time=$(date '+%Y.%m.%d-%H.%M.%S')
 	echo -e "$time $type $PROG_NAME [${CMD_NAME:-main}]: $@" >&2
 }
 
-## Just call _template with type 'info'
+## Just call _log_template with type 'info'
 log_info() {
-	_template 'info' "$@"
+	_log_template 'info' "$@"
 }
 
-## Just call _template with type 'info'
+## Just call _log_template with type 'info'
 log_warn() {
-	_template 'warn' "$@"
+	_log_template 'warn' "$@"
 }
 
-## Call _template and die
+## Call _log_template and die
 log_error() {
-	_template 'error' "$@"
+	_log_template 'error' "$@"
 	exit 1
 }
 
 # Display functions
 
+## Print: script func: message
+_template() {
+	local name="$PROG_NAME"
+	[[ -n "$CMD_NAME" ]] && name+=" $CMD_NAME"
+	echo -e "$name: $@" >&2
+}
+
 ## Print message to stderr
 warn() {
-	echo -e "$PROG_NAME: $@" >&2
+	_template "$@"
 }
 
 ## Print message to stderr and die
 error() {
-	echo -e "$PROG_NAME: $@" >&2
+	_template "$@"
 	exit 1
 }
 
