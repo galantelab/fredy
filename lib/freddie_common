@@ -43,7 +43,7 @@ log_error() {
 ## Print: script func: message
 _template() {
 	local name="$PROG_NAME"
-	[[ -n "$CMD_NAME" ]] && name+=" $CMD_NAME"
+	[[ -v CMD_NAME ]] && name+=" $CMD_NAME"
 	echo -e "$name: $@" >&2
 }
 
