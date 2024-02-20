@@ -138,22 +138,39 @@ cod="$output_dir/$CMD_NAME"
 mkdir -p "$cod"
 
 # Create a temp dir
-tdir=$(mktemp -d)
+#tdir=$(mktemp -d)
+tdir="$cod/tmp"
+mkdir -p "$tdir"
 
 # Remove it automagicly
-trap 'rm -rf "$tdir"' EXIT
+#trap 'rm -rf "$tdir"' EXIT
 
 > "$tdir/nsamplespertranscript.tsv"
 
 log_info "Step1"
-for i in $(cut -f 1 "$chimeric_most_shared_tsv" | sort -u); do
-	n_samples=$(grep -w "$i" "$expression_expression_tsv" \
-		| tr -t '\t' '\n' \
-		| awk '{if ($1 > 0) print}' \
-		| grep -v MSTRG \
-		| wc -l)
-	echo -e "$i\t$n_samples"
-done > "$tdir/nsamplespertranscript.tsv"
+#for i in $(cut -f 1 "$chimeric_most_shared_tsv" | sort -u); do
+	#n_samples=$(grep -w "$i" "$expression_expression_tsv" \
+		#| tr -t '\t' '\n' \
+		#| awk '{if ($1 > 0) print}' \
+		#| grep -v MSTRG \
+		#| wc -l)
+	#echo -e "$i\t$n_samples"
+#done > "$tdir/nsamplespertranscript.tsv"
+awk -v OFS="\t" '
+	NR==FNR {
+		v[$1]=1;
+		next
+	}
+	v[$1] && $2>0 {
+		acm[$1]++
+	}
+	END {
+		for (k in acm)
+			print k,acm[k]
+	}' \
+	"$chimeric_most_shared_tsv" \
+	"$expression_expression_tsv" \
+	> "$tdir/nsamplespertranscript.tsv"
 
 log_info "Step2"
 Rscript "$BIN_DIR/../scripts/median.R" \
@@ -161,7 +178,14 @@ Rscript "$BIN_DIR/../scripts/median.R" \
 	"$cod/median.tsv" \
 	|| log_error "median.R failed"
 
-awk -F '.' '{print $0"\t"$1"."$2}' \
+#awk -F '.' '{print $0"\t"$1"."$2}' \
+	#"$chimeric_most_shared_tsv" \
+	#> "$tdir/most_shared.tsv"
+awk -v OFS="\t" '
+	{
+		split($1,v,".");
+		print $_,v[1]"."v[2]
+	}' \
 	"$chimeric_most_shared_tsv" \
 	> "$tdir/most_shared.tsv"
 
@@ -170,6 +194,36 @@ log_info "Step3"
 > "$tdir/host_expression"
 > "$tdir/chimeric_expression"
 > "$tdir/psi.tsv"
+
+#for i in $(cut -f 4 "$tdir/most_shared.tsv" | sort -u); do
+	#head -n1 \
+		#"$expression_expression_tsv" \
+		#> "$tdir/chimeric_expression"
+
+	#head -n1 \
+		#"$expression_expression_tsv" \
+		#> "$tdir/host_expression"
+
+	#grep -w "$i" \
+		#"$tdir/most_shared.tsv" \
+		#| cut -f 1 \
+		#| fgrep -wf - "$expression_expression_tsv" \
+		#>> "$tdir/chimeric_expression"
+
+	#grep -w "$i" "$tdir/most_shared.tsv" \
+		#| cut -f 2 \
+		#| fgrep -wf - "$string_merge_gtf" \
+		#| fgrep -v exon \
+		#| awk -F '"' '{print $4}' \
+		#| fgrep -wf - "$expression_expression_tsv" \
+		#>> "$tdir/host_expression"
+
+	#Rscript "$BIN_DIR/../scripts/psi.R" \
+		#"$tdir/host_expression" \
+		#"$tdir/chimeric_expression" \
+		#"$i" \
+		#|| log_error "psi.R failed"
+#done > "$tdir/psi.tsv"
 
 for i in $(cut -f 4 "$tdir/most_shared.tsv" | sort -u); do
 	head -n1 \
@@ -180,19 +234,46 @@ for i in $(cut -f 4 "$tdir/most_shared.tsv" | sort -u); do
 		"$expression_expression_tsv" \
 		> "$tdir/host_expression"
 
-	# Redundante filtrar em most_shared lendo o próprio most_shared?
-	grep -w "$i" \
+	awk -v filter="$i" '
+		NR==FNR && $4==filter {
+			v[$1]=1;
+			next
+		}
+		v[$1]' \
 		"$tdir/most_shared.tsv" \
-		| cut -f 1 \
-		| fgrep -wf - "$expression_expression_tsv" \
+		"$expression_expression_tsv" \
 		>> "$tdir/chimeric_expression"
 
-	grep -w "$i" "$tdir/most_shared.tsv" \
-		| cut -f 2 \
-		| fgrep -wf - "$string_merge_gtf" \
-		| fgrep -v exon \
-		| awk -F '"' '{print $4}' \
-		| fgrep -wf - "$expression_expression_tsv" \
+	awk -F "\t" -v filter="$i" '
+		ARGIND==1 && $4==filter {
+			v[$2]=1;
+			next
+		}
+		ARGIND==2 && $3 != "exon" {
+			for (k in v) {
+				if ($9 ~k) {
+					check=1;
+					break
+				}
+			}
+		}
+		check {
+			n=split($9,a,"; ");
+			for (i=1;i<=n;i++) {
+				split(a[i],x," ");
+				if (x[1] == "transcript_id") {
+					id=x[2];
+					gsub(/"/,"",id);
+					u[id]=1;
+					break
+				}
+			}
+			check=0
+		}
+		ARGIND==3 && u[$1]' \
+		"$tdir/most_shared.tsv" \
+		"$string_merge_gtf" \
+		"$expression_expression_tsv" \
 		>> "$tdir/host_expression"
 
 	Rscript "$BIN_DIR/../scripts/psi.R" \
@@ -203,7 +284,7 @@ for i in $(cut -f 4 "$tdir/most_shared.tsv" | sort -u); do
 done > "$tdir/psi.tsv"
 
 echo -e 'Id\tGene\tTranscript\tEvent_in\tSamples\tExpression_Median\tPsi\tCoding(?)\tObs' \
-	> "$cod/results"
+	> "$cod/results.tsv"
 
 join \
 	<(sort -k1,1 "$tdir/most_shared.tsv") \
@@ -229,35 +310,43 @@ join \
 	| awk '{$2=""; print $0}' - \
 	| sed 's/\ /\t/g' \
 	| sed 's/espaco/\ /g' \
-	>> "$cod/results"
-
+	>> "$cod/results.tsv"
 
 mkdir -p "$cod/figures"
 
-for i in $(awk '{if ($2 >= 0.15) print $1}' "$tdir/psi.tsv" | sort -u) ; do
+for i in $(awk '$2>=0.15{print $1}' "$tdir/psi.tsv" | sort -u) ; do
 	head -n1 "$expression_expression_tsv" \
 		> "$tdir/chimeric_expression"
 
 	head -n1 "$expression_expression_tsv" \
 		> "$tdir/host_expression"
 
-	grep -w "$i" \
+	awk -v filter="$i" '
+		NR==FNR && $_~filter {
+			v[$1]=1;
+			next
+		}
+		v[$1]' \
 		"$chimeric_most_shared_tsv" \
-		| cut -f 1 \
-		| fgrep -wf - "$expression_expression_tsv" \
+		"$expression_expression_tsv" \
 		>> "$tdir/chimeric_expression"
 
-	grep -w "$i" \
+	awk -v filter="$i" '
+		NR==FNR && $_~filter {
+			v[$3]=1;
+			next
+		}
+		v[$1]' \
 		"$chimeric_most_shared_tsv" \
-		| cut -f 3 \
-		| fgrep -wf - "$expression_expression_tsv" \
+		"$expression_expression_tsv" \
 		>> "$tdir/host_expression"
 
-	Rscript "$BIN_DIR/../scripts/boxplot_alt.R" \
+	Rscript "$BIN_DIR/../scripts/boxplot.R" \
 		"$tdir/host_expression" \
 		"$tdir/chimeric_expression" \
 		"$cod/figures/$i.svg" \
-		|| log_error "boxplot_alt.R failed"
+		> /dev/null 2>&1 \
+		|| log_error "boxplot.R failed"
 done
 
 log_info "Done"
