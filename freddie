@@ -14,46 +14,55 @@ source "$ROOT_DIR/lib/freddie_common"
 usage() {
 	echo "$PROG_NAME $VERSION"
 	echo ""
-	echo "Usage: $PROG_NAME [-hv]"
+	echo "Usage: $PROG_NAME [-hV]"
 	echo "Usage: $PROG_NAME <command> [options]"
 	echo ""
 	echo "Options:"
-	echo "  -h          Print this help"
-	echo "  -v          Print current version"
+	echo "  -h, --help       Print this help"
+	echo "  -V, --version    Print current version"
 	echo ""
 	echo "Commands:"
-	echo "  string      Run StringTie2"
-	echo "  chimeric    Finding potential chimeric"
-	echo "              transcripts"
-	echo "  coding      Estimates the possibility"
-	echo "              of a chimeric transcript"
-	echo "              being coding"
-	echo "  pfam        Analyzes the domains of the"
-	echo "              sequences generated in"
-	echo "              relation to the host"
-	echo "              transcript"
-	echo "  expression  Measurement of transcript"
-	echo "              expression by kallisto"
-	echo "  results     Compile results from the"
-	echo "              previous steps"
+	echo "  string           Assemble sequenced reads"
+	echo "  chimeric         Find potential chimeric transcripts"
+	echo "  coding           Estimate the chance of a coding chimeric"
+	echo "                   transcript"
+	echo "  pfam             Analyze the generated sequences' domains"
+	echo "                   relative to the host transcript"
+	echo "  expression       Measure the expression of transcripts"
+	echo "  results          Compile results from the previous steps"
 	echo ""
 }
 
 parse_opt() {
-	while getopts ":hv" OPTION; do
-		case "$OPTION" in
-			h)
+	# TEMP cannot be local
+	TEMP=$(getopt \
+		-o 'hV' \
+		--long 'help,version' \
+		-n "$PROG_NAME" -- "$@") \
+		|| error "$(try_help)"
+
+	eval set -- "$TEMP"
+	unset TEMP
+
+	while true; do
+		case "$1" in
+			-h|--help)
 				usage
 				exit
 				;;
-			v)
+			-V|--version)
 				echo "$VERSION"
 				exit
 				;;
-			?)
-				error "No such option '-$OPTARG'\n$(try_help)"
+			--)
+				shift
+				break
+				;;
+			*)
+				error "Internal error!"
 				;;
 		esac
+		shift
 	done
 }
 
