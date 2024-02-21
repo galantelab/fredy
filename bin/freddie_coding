@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-## Annotation gencode
-## Prefix
-## freddie coding -p K562_short -m <name-to-rnasambamodel> -d <path-to-proteinseq>
-
 # Bash pragmas
 set -o errexit
 set -o pipefail
@@ -28,73 +24,112 @@ CHIMERIC_MOST_SHARED_TSV="chimeric/most_shared.tsv"
 usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
-	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+	echo ""
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] -o DIR -m FILE -d FILE"
+	echo ""
+	echo "Mandatory Options:"
+	echo "  -o, --output-dir      Output directory. Create the directory"
+	echo "                        if it does not exist"
+	echo "  -m, --protein-model   File with the model of RNASamba"
+	echo "  -d, --protein-db      File with the protein sequences"
+	echo ""
+	echo "Options:"
+	echo "  -h, --help            Print this help"
+	echo "  -F, --coding-filter   Filter transcripts with probability"
+	echo "                        of being protein-coding [default: $coding_filter]"
+	echo ""
 }
 
 validate_opt() {
 	# Mandatory options '-o', '-m' and '-d'
 	if [[ -z "$output_dir" ]]; then
-		error "Missing '-o' option\n$(try_help)"
+		try_help_and_die "Missing '-o' option"
 	elif [[ ! -d "$output_dir" ]]; then
 		error "No such dir '$output_dir'.\nStart" \
 			"your analysis from '$PROG_NAME string'"
 	fi
 
-	if [[ -z "$model" ]]; then
-		error "Missing '-m' option\n$(try_help)"
-	elif [[ ! -f "$model" ]]; then
-		error "No such file '$model'"
+	if [[ -z "$protein_model" ]]; then
+		try_help_and_die "Missing '-m' option"
+	elif [[ ! -f "$protein_model" ]]; then
+		error "No such file '$protein_model'"
 	fi
 
 	if [[ -z "$protein_db" ]]; then
-		error "Missing '-d' option\n$(try_help)"
+		try_help_and_die "Missing '-d' option"
 	elif [[ ! -f "$protein_db" ]]; then
 		error "No such file '$protein_db'"
+	fi
+
+	# Options '-F'
+	if awk '$1 < 0 || $1 > 1 {exit(0)} {exit(1)}' <<< $coding_filter; then
+		try_help_and_die "'$coding_filter' is not a valid '-F' option"
 	fi
 }
 
 validate_dep() {
 	# chimeric
 	if [[ ! -f "$chimeric_fasta" ]]; then
-		error "'$chimeric_fasta' not found\n.Maybe" \
+		error "'$chimeric_fasta' not found.\nMaybe" \
 			"you need to run '$PROG_NAME chimeric' before"
 	fi
 
 	if [[ ! -f "$chimeric_most_shared_tsv" ]]; then
-		error "'$chimeric_most_shared_tsv' not found\n.Maybe" \
+		error "'$chimeric_most_shared_tsv' not found.\nMaybe" \
 			"you need to run '$PROG_NAME chimeric' before"
 	fi
 }
 
 # Options
 output_dir=""
-model=""
+protein_model=""
 protein_db=""
+coding_filter=0.9
 
 # Processing variables
 cod="" # Current output dir
 chimeric_fasta=""
 chimeric_most_shared_tsv=""
 
-[[ $# == 0 ]] && { usage; exit; }
+[[ $# -eq 0 ]] && { usage; exit; }
 
-while getopts ":ho:m:d:" OPTION; do
-	case "$OPTION" in
-		h)
+TEMP=$(getopt \
+	-o 'ho:m:d:F:' \
+	--long 'help,output-dir:,protein-model:,protein-db:,coding-filter:' \
+	-n "$PROG_NAME $CMD_NAME" -- "$@") \
+	|| try_help_and_die
+
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+	case "$1" in
+		-h|--help)
 			usage
 			exit
 			;;
-		o)
-			output_dir="$OPTARG"
+		-o|--output-dir)
+			output_dir="$2"
+			shift 2
 			;;
-		m)
-			model="$OPTARG"
+		-m|--protein-model)
+			protein_model="$2"
+			shift 2
 			;;
-		d)
-			protein_db="$OPTARG"
+		-d|--protein-db)
+			protein_db="$2"
+			shift 2
 			;;
-		?)
-			error "No such option '-$OPTARG'\n$(try_help)"
+		-F|--coding-filter)
+			coding_filter="$2"
+			shift 2
+			;;
+		--)
+			shift
+			break
+			;;
+		*)
+			error "Internal error!"
 			;;
 	esac
 done
@@ -125,7 +160,7 @@ rnasamba classify \
 	-p "$cod/predicted_proteins.fa" \
 	"$cod/classification.tsv" \
 	"$chimeric_fasta" \
-	"$model" \
+	"$protein_model" \
 	2> "$cod/classification.tsv.log" \
 	|| log_error \
 		"rnasamba failed:" \
@@ -137,8 +172,8 @@ rnasamba classify \
 
 #Selecionando somente os transcritos dos protein_coding com protencial codificante
 log_info "Selecting chimeric transcripts with coding potential"
-awk -v OFS="\t" '
-	NR==FNR && NR>1 && $3>=0.9 {
+awk -v OFS="\t" -v filter="$coding_filter" '
+	NR==FNR && NR>1 && $3>=filter {
 		v[$1]=1;
 		next
 	}
@@ -160,8 +195,8 @@ awk -v OFS="\t" '
 	#|  awk '{print $2"\t"$1}' \
 	#> "$cod/coding.txt"
 
-awk '
-	NR>1 && $3>=0.9 {
+awk -v filter="$coding_filter" '
+	NR>1 && $3>=filter {
 		split($1,v,".");
 		print $1,"gene="v[1]"."v[2]
 	}' \
