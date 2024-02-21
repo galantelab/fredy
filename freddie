@@ -39,7 +39,7 @@ parse_opt() {
 		-o 'hV' \
 		--long 'help,version' \
 		-n "$PROG_NAME" -- "$@") \
-		|| error "$(try_help)"
+		|| try_help_and_die
 
 	eval set -- "$TEMP"
 	unset TEMP
@@ -62,7 +62,6 @@ parse_opt() {
 				error "Internal error!"
 				;;
 		esac
-		shift
 	done
 }
 
@@ -77,14 +76,14 @@ parse_cmd() {
 		expression) ;;
 		results)    ;;
 		*)
-			error "'$cmd' is not a valid command\n$(try_help)"
+			try_help_and_die "'$cmd' is not a valid command"
 			;;
 	esac
 
 	exec "$ROOT_DIR/bin/${PROG_NAME}_${cmd}" "$@"
 }
 
-[[ $# == 0 ]] && { usage; exit; }
+[[ $# -eq 0 ]] && { usage; exit; }
 
 if [[ "$1" =~ ^- ]]; then
 	parse_opt "$@"
