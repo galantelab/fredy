@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
 
-# TODO: Remove fastq and use all BAMs as arguments
-
-## Annotation gencode
-## Prefix
-## Bams files
-## freddie string -p K562_short -f files.txt -t 8 -e long -g <gtf/path>
-
 # Bash pragmas
 set -o errexit
 set -o pipefail
@@ -25,9 +18,33 @@ SCRIPT_NAME="${0##*/}"
 CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
 
 usage() {
+	local name_space=$(echo "$PROG_NAME $CMD_NAME" | tr '[:alnum:]' ' ')
+
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
-	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+	echo ""
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-t INT] [-e STRING] [-f FILE]"
+	echo "       $name_space -o DIR -g FILE <FILE> ..."
+	echo ""
+	echo "Arguments:"
+	echo "  One or more alignment file in BAM format"
+	echo ""
+	echo "Mandatory Options:"
+	echo "  -o, --output-dir   Output directory. Create the directory"
+	echo "                     if it does not exist"
+	echo "  -g, --gtf          Gene annotation on the reference genome"
+	echo "                     in GTF format"
+	echo "  -f, --bam-list     File containing a newline separated list"
+	echo "                     of alignment files in BAM format. This"
+	echo "                     option is not mandatory if one or more"
+	echo "                     BAM files are passed as argument"
+	echo ""
+	echo "Options:"
+	echo "  -h, --help         Print this help"
+	echo "  -t, --threads      Number of threads [default: $threads]"
+	echo "  -e, --experiment   Type of reads (short or long)"
+	echo "                     [default: $experiment]"
+	echo ""
 }
 
 validate_opt() {
@@ -35,45 +52,44 @@ validate_opt() {
 
 	# Mandatory options '-o', '-g' and '-f'
 	if [[ -z "$output_dir" ]]; then
-		error "Missing '-o' option\n$(try_help)"
+		try_help_and_die "Missing '-o' option"
 	fi
 
-	# If there is no fastq test for args
+	# If there is no bam_list test for args
 	# Then, check for valid bam files
-	if [[ -z "$fastq" ]]; then
+	if [[ -z "$bam_list" ]]; then
 		if [[ "${#bams[@]}" == 0 ]]; then
-			error "Neither '-f' option nor BAM file were passed\n$(try_help)"
+			try_help_and_die "Neither '-f' option nor BAM file were passed"
 		fi
 		for bam in "${bams[@]}"; do
 			if [[ ! -f "$bam" ]]; then
 				error "No such file '$bam'"
 			fi
 		done
-	elif [[ ! -f "$fastq" ]]; then
-		error "No such file '$fastq'"
+	elif [[ ! -f "$bam_list" ]]; then
+		error "No such file '$bam_list'"
 	else
 		while read bam; do
 			if [[ ! -f "$bam" ]]; then
 				error "No such file '$bam'"
 			fi
-		done < "$fastq"
+		done < "$bam_list"
 	fi
 
 	if [[ -z "$gtf" ]]; then
-		error "Missing '-g' option\n$(try_help)"
+		try_help_and_die "Missing '-g' option"
 	elif [[ ! -f "$gtf" ]]; then
 		error "No such file '$gtf'"
 	fi
 
 	# Options
 	if [[ ! "$experiment" =~ ^(short|long)$ ]]; then
-		error "'$experiment' is not a valid '-e' option\n$(try_help)"
+		try_help_and_die "'$experiment' is not a valid '-e' option"
 	fi
 
 	if [[ ! "$threads" =~ ^[0-9]+$ ]] || [[ "$threads" -lt 1 ]]; then
-		error "'$threads' is not a valid '-t' option\n$(try_help)"
+		try_help_and_die "'$threads' is not a valid '-t' option"
 	fi
-
 }
 
 validate_dep() {
@@ -82,50 +98,69 @@ validate_dep() {
 
 # Options
 output_dir=""
-fastq="" # Os BAMS estão em fastq?
+bam_list=""
 bams=()
-gtf="" # Pode ser gff?
+gtf=""
 threads=8
 experiment="short"
 
 # Processing variables
 cod="" # Current output dir
 paramet=""
-stringtie_nprocs=2
-jobs=1
+stringtie_threads=2
+parallel_max_procs=1
 
-[[ $# == 0 ]] && { usage; exit; }
+[[ $# -eq 0 ]] && { usage; exit; }
 
-while getopts ":ho:t:e:g:f:" OPTION; do
-	case "$OPTION" in
-		h)
+TEMP=$(getopt \
+	-o 'ho:t:e:g:f:' \
+	--long 'help,output-dir:,threads:,experiment:,gtf:,bam-list:' \
+	-n "$PROG_NAME $CMD_NAME" -- "$@") \
+	|| try_help_and_die
+
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+	case "$1" in
+		-h|--help)
 			usage
 			exit
 			;;
-		o)
-			output_dir="$OPTARG"
+		-o|--output-dir)
+			output_dir="$2"
+			shift 2
 			;;
-		t)
-			threads="$OPTARG"
+		-t|--threads)
+			threads="$2"
+			shift 2
 			;;
-		e)
-			experiment="$OPTARG"
+		-e|--experiment)
+			experiment="$2"
+			shift 2
 			;;
-		g)
-			gtf="$OPTARG"
+		-g|--gtf)
+			gtf="$2"
+			shift 2
 			;;
-		f)
-			fastq="$OPTARG"
+		-f|--bam-list)
+			bam_list="$2"
+			shift 2
 			;;
-		?)
-			error "No such option '-$OPTARG'\n$(try_help)"
+		--)
+			shift
+			break
+			;;
+		*)
+			error "Internal error!"
 			;;
 	esac
 done
 
 # Get the files if they were passed as arg
-shift $(($OPTIND - 1))
-bams=("$@")
+for arg; do
+	bams+=("$arg")
+done
 
 # Check for errors
 validate_opt
@@ -133,25 +168,25 @@ validate_opt
 
 # MAIN
 
-# Load all files from $fastq file to $bams=()
-if [[ -n "$fastq" ]]; then
+# Load all files from $bam_list file to $bams=()
+if [[ -n "$bam_list" ]]; then
 	# Reset bams=() - just in case
 	bams=()
 	while read; do
 		bams+=("$REPLY")
-	done < "$fastq"
+	done < "$bam_list"
 fi
 
 if [[ "$experiment" == "long" ]]; then
 	paramet="-L -a 3"
 fi
 
-# The max number of jobs is threads, then
-# set stringtie_nprocs and jobs accordingly
-if (( threads < stringtie_nprocs )); then
-	stringtie_nprocs=$threads
+# The max number of jobs is 'threads', then
+# set stringtie_threads and parallel_max_procs accordingly
+if (( threads < stringtie_threads )); then
+	stringtie_threads=$threads
 else
-	jobs=$(( threads / stringtie_nprocs ))
+	parallel_max_procs=$(( threads / stringtie_threads ))
 fi
 
 # Output dir concerning this command
@@ -162,13 +197,13 @@ mkdir -p "$cod"
 
 log_info 'Running Stringtie'
 parallel \
-	--max-procs=$jobs \
+	--max-procs=$parallel_max_procs \
 	--joblog="$cod/stringtie_job.log" \
 	stringtie \
 		'{}' \
 		$paramet \
 		-G "$gtf" \
-		-p $stringtie_nprocs \
+		-p $stringtie_threads \
 		-o "$cod"/'{/.}'.gtf \
 		'2>' "$cod"/'{/.}'.gtf.log \
 	::: "${bams[@]}"
