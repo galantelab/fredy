@@ -7,19 +7,36 @@ export LC_ALL=C
 
 # Global variables
 
-## Say my name
+## Myself
 PROG_NAME='freddie'
 
 ## Our current version
 VERSION='1.0.0-dev6'
 
+# Print:
+# script [func], if CMD_NAME and $1 are defined
+# script func, if CMD_NAME is defined
+# script, if none above
+_say_myname() {
+	if [[ -v CMD_NAME ]]; then
+		if [[ $# -gt 0 ]]; then
+			echo "$PROG_NAME [$CMD_NAME]"
+		else
+			echo "$PROG_NAME $CMD_NAME"
+		fi
+	else
+		echo "$PROG_NAME"
+	fi
+}
+
 # Log functions
 
 ## Print: date info|error script [func]: message
 _log_template() {
-	local type="$1"; shift
+	local log_type="$1"; shift
 	local time=$(date '+%Y.%m.%d-%H.%M.%S')
-	echo -e "$time $type $PROG_NAME [${CMD_NAME:-main}]: $@" >&2
+	local name=$(_say_myname 1)
+	echo -e "$time $log_type $name: $@" >&2
 }
 
 ## Just call _log_template with type 'info'
@@ -42,8 +59,7 @@ log_error() {
 
 ## Print: script func: message
 _template() {
-	local name="$PROG_NAME"
-	[[ -v CMD_NAME ]] && name+=" $CMD_NAME"
+	local name=$(_say_myname)
 	echo -e "$name: $@" >&2
 }
 
@@ -59,14 +75,13 @@ error() {
 }
 
 # Print to stderr a message and the string
-# Try help 'porg cmd -h'  for more information
-# After that die
-try_help() {
-	if [[ -v CMD_NAME ]]; then
-		echo "Try '$PROG_NAME $CMD_NAME -h' for more information"
-	else
-		echo "Try '$PROG_NAME -h' for more information"
-	fi
+# Try help 'prog cmd -h'  for more information
+# After that, rust in piece
+try_help_and_die() {
+	local name=$(_say_myname)
+	[[ $# -gt 0 ]] && warn "$@"
+	echo -e "Try '$name -h' for more information" >&2
+	exit 1
 }
 
 # Warn if we received a signal to exit
