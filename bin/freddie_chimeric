@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-## Annotation gencode
-## Prefix and RTC list (Input)
-## freddie chimeric -p K562_short -i input/rtc.bed -g <gtf-path> -G <genome-path> -y default
-
 # Bash pragmas
 set -o errexit
 set -o pipefail
@@ -25,48 +21,67 @@ CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
 STRING_MERGE_GTF="string/merge.gtf"
 
 usage() {
+	local name_space=$(echo "$PROG_NAME $CMD_NAME" | tr '[:alnum:]' ' ')
+
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
-	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+	echo ""
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-T DIR] [-y STRING]"
+	echo "       $name_space -o DIR -g FILE -G FILE -i FILE"
+	echo ""
+	echo "Mandatory Options:"
+	echo "  -o, --output-dir       Output directory. Create the directory"
+	echo "                         if it does not exist"
+	echo "  -g, --gtf              Gene annotation on the reference genome"
+	echo "                         in GTF format"
+	echo "  -G, --reference-file   FASTA file for the reference genome"
+	echo "  -i, --bed              Events input in BED4 format"
+	echo ""
+	echo "Options:"
+	echo "  -h, --help             Print this help"
+	echo "  -T, --temp-dir         Use DIR for temporaries [default: $temp_dir]"
+	echo "  -y, --chimeric-filter  Filter to be considered a chimeric event"
+	echo "                         (default or strict). 'default' - 50% overlap"
+	echo "                         of the event in the exon; 'strict' - 50%"
+	echo "                         overlap of the event in the exon and of the"
+	echo "                         exon in the event [default: $type]"
+	echo ""
 }
 
 validate_opt() {
 	# Mandatory options '-o', '-g', '-G' and '-i'
 	if [[ -z "$output_dir" ]]; then
-		error "Missing '-o' option\n$(try_help)"
+		try_help_and_die "Missing '-o' option"
 	elif [[ ! -d "$output_dir" ]]; then
 		error "No such dir '$output_dir'.\nStart" \
 			"your analysis from '$PROG_NAME string'"
 	fi
 
 	if [[ -z "$gtf" ]]; then
-		error "Missing '-g' option\n$(try_help)"
+		try_help_and_die "Missing '-g' option"
 	elif [[ ! -f "$gtf" ]]; then
 		error "No such file '$gtf'"
 	fi
 
 	if [[ -z "$genome" ]]; then
-		error "Missing '-G' option\n$(try_help)"
+		try_help_and_die "Missing '-G' option"
 	elif [[ ! -f "$genome" ]]; then
 		error "No such file '$genome'"
 	fi
 
 	if [[ -z "$input" ]]; then
-		error "Missing '-i' option\n$(try_help)"
+		try_help_and_die "Missing '-i' option"
 	elif [[ ! -f "$input" ]]; then
 		error "No such file '$input'"
 	fi
 
 	# Options
 	if [[ ! "$type" =~ ^(strict|default)$ ]]; then
-		error "'$type' is not a valid '-y' option\n$(try_help)"
+		try_help_and_die "'$type' is not a valid '-y' option"
 	fi
 }
 
 validate_dep() {
-	# O merge.gtf deve ser passado pelo usuário ou
-	# ser localizado pelo output_dir e prefix?
-	#
 	# string
 	if [[ ! -f "$string_merge_gtf" ]]; then
 		error "'$string_merge_gtf' not found.\nMaybe" \
@@ -76,8 +91,9 @@ validate_dep() {
 
 # Options
 output_dir=""
-input="" # BED?
-gtf="" # Pode ser gff?
+temp_dir="/tmp"
+input="" # BED
+gtf=""
 genome=""
 type="default"
 
@@ -87,31 +103,53 @@ tdir=""
 paramet=""
 string_merge_gtf=""
 
-[[ $# == 0 ]] && { usage; exit; }
+[[ $# -eq 0 ]] && { usage; exit; }
 
-while getopts ":ho:i:g:G:y:" OPTION; do
-	case "$OPTION" in
-		h)
+TEMP=$(getopt \
+	-o 'hT:o:i:g:G:y:' \
+	--long 'help,temp-dir:,output-dir:,bed:,gtf:,reference-file:,chimeric-filter:' \
+	-n "$PROG_NAME $CMD_NAME" -- "$@") \
+	|| try_help_and_die
+
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+	case "$1" in
+		-h|--help)
 			usage
 			exit
 			;;
-		o)
-			output_dir="$OPTARG"
+		-T|--temp-dir)
+			temp_dir="$2"
+			shift 2
 			;;
-		i)
-			input="$OPTARG"
+		-o|--output-dir)
+			output_dir="$2"
+			shift 2
 			;;
-		g)
-			gtf="$OPTARG"
+		-i|--bed)
+			input="$2"
+			shift 2
 			;;
-		G)
-			genome="$OPTARG"
+		-g|--gtf)
+			gtf="$2"
+			shift 2
 			;;
-		y)
-			type="$OPTARG"
+		-G|--reference-file)
+			genome="$2"
+			shift 2
 			;;
-		?)
-			error "No such option '-$OPTARG'\n$(try_help)"
+		-y|--chimeric-filter)
+			type="$2"
+			shift 2
+			;;
+		--)
+			shift
+			break
+			;;
+		*)
+			error "Internal error!"
 			;;
 	esac
 done
@@ -138,7 +176,7 @@ cod="$output_dir/$CMD_NAME"
 mkdir -p "$cod"
 
 # Create a temp dir
-tdir=$(mktemp -d)
+tdir=$(mktemp -d --tmpdir="$temp_dir")
 
 # Remove it automagicly
 trap 'rm -rf "$tdir"' EXIT
