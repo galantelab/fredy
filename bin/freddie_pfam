@@ -24,24 +24,51 @@ CODING_TRANSCRIPT_TXT="coding/transcript.txt"
 CODING_CODING_TXT="coding/coding.txt"
 
 usage() {
+	local name_space=$(echo "$PROG_NAME $CMD_NAME" | tr '[:alnum:]' ' ')
+
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
-	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+	echo ""
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-T DIR] [-E NUM] [-t INT]"
+	echo "       $name_space -o DIR -M FILE"
+	echo ""
+	echo "Mandatory Options:"
+	echo "  -o, --output-dir   Output directory. Create the directory"
+	echo "                     if it does not exist"
+	echo "  -M, --pfam-model   HMmer tool index file"
+	echo ""
+	echo "Options:"
+	echo "  -h, --help         Print this help"
+	echo "  -T, --temp-dir     Use DIR for temporaries [default: $temp_dir]"
+	echo "  -t, --threads      Number of threads [default: $threads]"
+	echo "  -E, --e-value      In the HMmer per-target output, report"
+	echo "                     target sequences with an e-value lesser"
+	echo "                     than NUM [default: $e_value]"
+	echo ""
 }
 
 validate_opt() {
 	# Mandatory option '-o' and '-M'
 	if [[ -z "$output_dir" ]]; then
-		error "Missing '-o' option\n$(try_help)"
+		try_help_and_die "Missing '-o' option"
 	elif [[ ! -d "$output_dir" ]]; then
 		error "No such dir '$output_dir'.\nStart" \
 			"your analysis from '$PROG_NAME string'"
 	fi
 
 	if [[ -z "$pfam_model" ]]; then
-		error "Missing '-M' option\n$(try_help)"
+		try_help_and_die "Missing '-M' option"
 	elif [[ ! -f "$pfam_model" ]]; then
 		error "No such file '$pfam_model'"
+	fi
+
+	# Options '-E' and '-t'
+	if awk 'typeof($1) ~/number|strnum/ && $1>=0 {exit(1)} {exit(0)}' <<< $e_value; then
+		try_help_and_die "'$e_value' is not a valid '-E' option"
+	fi
+
+	if awk 'typeof($1) ~/number|strnum/ && $1>0 {exit(1)} {exit(0)}' <<< $threads; then
+		try_help_and_die "'$threads' is not a valid '-t' option"
 	fi
 }
 
@@ -69,7 +96,10 @@ validate_dep() {
 
 # Options
 output_dir=""
+temp_dir="/tmp"
 pfam_model=""
+e_value=1e-6
+threads=4
 
 # Processing variables
 cod="" # Current output dir
@@ -79,22 +109,49 @@ coding_ann_proteins_fasta=""
 coding_transcript_txt=""
 coding_coding_txt=""
 
-[[ $# == 0 ]] && { usage; exit; }
+[[ $# -eq 0 ]] && { usage; exit; }
 
-while getopts ":ho:M:" OPTION; do
-	case "$OPTION" in
-		h)
+TEMP=$(getopt \
+	-o 'hT:o:M:E:t:' \
+	--long 'help,temp-dir:,output-dir:,pfam-model:,e-value:,threads:' \
+	-n "$PROG_NAME $CMD_NAME" -- "$@") \
+	|| try_help_and_die
+
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+	case "$1" in
+		-h|--help)
 			usage
 			exit
 			;;
-		o)
-			output_dir="$OPTARG"
+		-T|--temp-dir)
+			temp_dir="$2"
+			shift 2
 			;;
-		M)
-			pfam_model="$OPTARG"
+		-o|--output-dir)
+			output_dir="$2"
+			shift 2
 			;;
-		?)
-			error "No such option '-$OPTARG'\n$(try_help)"
+		-M|--pfam-model)
+			pfam_model="$2"
+			shift 2
+			;;
+		-E|--e-value)
+			e_value="$2"
+			shift 2
+			;;
+		-t|--threads)
+			threads="$2"
+			shift 2
+			;;
+		--)
+			shift
+			break
+			;;
+		*)
+			error "Internal error!"
 			;;
 	esac
 done
@@ -120,7 +177,7 @@ cod="$output_dir/$CMD_NAME"
 mkdir -p "$cod"
 
 # Create a temp dir
-tdir=$(mktemp -d)
+tdir=$(mktemp -d --tmpdir="$temp_dir")
 
 # Remove it automagicly
 trap 'rm -rf "$tdir"' EXIT
@@ -148,8 +205,8 @@ fi
 # --cpu e -E podem ser passado pelo usuário?
 hmmsearch \
 	--tblout "$cod/pfam.hmm" \
-	-E 1e-6 \
-	--cpu 4 \
+	-E $e_value \
+	--cpu $threads \
 	"$pfam_model" \
 	"$tdir/pfam.fa" \
 	> "$cod/pfam.hmm.stdout.log" \
