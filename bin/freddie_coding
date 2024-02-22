@@ -62,7 +62,7 @@ validate_opt() {
 	fi
 
 	# Options '-F'
-	if awk '$1 < 0 || $1 > 1 {exit(0)} {exit(1)}' <<< $coding_filter; then
+	if awk 'typeof($1) ~/number|strnum/ && $1>=0 && $1<=1 {exit(1)} {exit(0)}' <<< $coding_filter; then
 		try_help_and_die "'$coding_filter' is not a valid '-F' option"
 	fi
 }

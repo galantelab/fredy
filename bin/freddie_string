@@ -87,7 +87,7 @@ validate_opt() {
 		try_help_and_die "'$experiment' is not a valid '-e' option"
 	fi
 
-	if [[ ! "$threads" =~ ^[0-9]+$ ]] || [[ "$threads" -lt 1 ]]; then
+	if awk 'typeof($1) ~/number|strnum/ && $1>0 {exit(1)} {exit(0)}' <<< $threads; then
 		try_help_and_die "'$threads' is not a valid '-t' option"
 	fi
 }
