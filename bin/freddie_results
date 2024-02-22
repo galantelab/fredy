@@ -36,13 +36,23 @@ EXPRESSION_EXPRESSION_TSV="expression/expression.tsv"
 usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
-	echo "Usage: $PROG_NAME $CMD_NAME [options]"
+	echo ""
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-T DIR] -o DIR"
+	echo ""
+	echo "Mandatory Options:"
+	echo "  -o, --output-dir   Output directory. Create the directory"
+	echo "                     if it does not exist"
+	echo ""
+	echo "Options:"
+	echo "  -h, --help         Print this help"
+	echo "  -T, --temp-dir     Use DIR for temporaries [default: $temp_dir]"
+	echo ""
 }
 
 validate_opt() {
 	# Mandatory options '-o'
 	if [[ -z "$output_dir" ]]; then
-		error "Missing '-o' option\n$(try_help)"
+		try_help_and_die "Missing '-o' option"
 	elif [[ ! -d "$output_dir" ]]; then
 		error "No such dir '$output_dir'.\nStart" \
 			"your analysis from '$PROG_NAME string'"
@@ -88,6 +98,7 @@ validate_dep() {
 
 # Options
 output_dir=""
+temp_dir="/tmp"
 
 # Processing variables
 cod="" # Current output dir
@@ -99,19 +110,37 @@ coding_classification_tsv=""
 pfam_info_dom_tsv=""
 expression_expression_tsv=""
 
-[[ $# == 0 ]] && { usage; exit; }
+[[ $# -eq 0 ]] && { usage; exit; }
 
-while getopts ":ho:" OPTION; do
-	case "$OPTION" in
-		h)
+TEMP=$(getopt \
+	-o 'hT:o:' \
+	--long 'help,temp-dir:,output-dir:' \
+	-n "$PROG_NAME $CMD_NAME" -- "$@") \
+	|| try_help_and_die
+
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+	case "$1" in
+		-h|--help)
 			usage
 			exit
 			;;
-		o)
-			output_dir="$OPTARG"
+		-T|--temp-dir)
+			temp_dir="$2"
+			shift 2
 			;;
-		?)
-			error "No such option '-$OPTARG'\n$(try_help)"
+		-o|--output-dir)
+			output_dir="$2"
+			shift 2
+			;;
+		--)
+			shift
+			break
+			;;
+		*)
+			error "Internal error!"
 			;;
 	esac
 done
@@ -138,12 +167,10 @@ cod="$output_dir/$CMD_NAME"
 mkdir -p "$cod"
 
 # Create a temp dir
-#tdir=$(mktemp -d)
-tdir="$cod/tmp"
-mkdir -p "$tdir"
+tdir=$(mktemp -d --tmpdir="$temp_dir")
 
 # Remove it automagicly
-#trap 'rm -rf "$tdir"' EXIT
+trap 'rm -rf "$tdir"' EXIT
 
 > "$tdir/nsamplespertranscript.tsv"
 
