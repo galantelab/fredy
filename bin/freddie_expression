@@ -60,7 +60,7 @@ validate_opt() {
 	# If there is no bam_list test for args
 	# Then, check for valid bam files
 	if [[ -z "$bam_list" ]]; then
-		if [[ "${#bams[@]}" == 0 ]]; then
+		if [[ "${#bams[@]}" -eq 0 ]]; then
 			try_help_and_die "Neither '-f' option nor BAM file were passed"
 		fi
 		for bam in "${bams[@]}"; do
