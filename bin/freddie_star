@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+
+# Bash pragmas
+set -o errexit
+set -o pipefail
+set -o nounset
+
+# Where I am
+BIN_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
+
+# Load common lib
+source "$BIN_DIR/../lib/freddie_common"
+
+# My name
+SCRIPT_NAME="${0##*/}"
+
+# Command name
+CMD_NAME="${SCRIPT_NAME#${PROG_NAME}_}"
+
+usage() {
+	local name_space=$(echo "$PROG_NAME $CMD_NAME" | tr '[:alnum:]' ' ')
+
+	echo "$PROG_NAME $VERSION"
+	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
+	echo ""
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-t INT] [-s STRING] [-f FILE]"
+	echo "       $name_space -o DIR -D DIR <FILE> ..."
+	echo ""
+	echo "Arguments:"
+	echo "  One or more sequencing file in FASTQ format"
+	echo ""
+	echo "Mandatory Options:"
+	echo "  -o, --output-dir   Output directory. Create the directory"
+	echo "                     if it does not exist"
+	echo "  -D, --star-index   STAR index directory"
+	echo "  -f, --fastq-list   File containing a newline separated list"
+	echo "                     of sequencing files in FASTQ format. This"
+	echo "                     option is not mandatory if one or more"
+	echo "                     FASTQ files are passed as argument"
+	echo ""
+	echo "Options:"
+	echo "  -h, --help         Print this help"
+	echo "  -t, --threads      Number of threads [default: $threads]"
+	echo "  -s, --sequencing   Type of sequencing (paired, single, long)"
+	echo "                     [default: $sequencing]"
+	echo ""
+}
+
+validate_opt() {
+	local fastq
+	local fastq_acm=0
+
+	# Mandatory options '-o', '-D' and '-f'
+	if [[ -z "$output_dir" ]]; then
+		try_help_and_die "Missing '-o' option"
+	fi
+
+	# If there is no fastq_list test for args
+	# Then, check for valid fastq files
+	if [[ -z "$fastq_list" ]]; then
+		if [[ "${#fastqs[@]}" -eq 0 ]]; then
+			try_help_and_die "Neither '-f' option nor fastq file were passed"
+		fi
+		for fastq in "${fastqs[@]}"; do
+			fastq_acm=$(( fastq_acm + 1 ))
+			if [[ ! -f "$fastq" ]]; then
+				error "No such file '$fastq'"
+			fi
+		done
+	elif [[ ! -f "$fastq_list" ]]; then
+		error "No such file '$fastq_list'"
+	else
+		while read fastq; do
+			fastq_acm=$(( fastq_acm + 1 ))
+			if [[ ! -f "$fastq" ]]; then
+				error "No such file '$fastq'"
+			fi
+		done < "$fastq_list"
+	fi
+
+	if [[ -z "$star_index" ]]; then
+		try_help_and_die "Missing '-D' option"
+	elif [[ ! -d "$star_index" ]]; then
+		error "No such dir '$star_index'"
+	fi
+
+	# Options
+	if [[ ! "$sequencing" =~ ^(paired|single|long)$ ]]; then
+		try_help_and_die "'$sequencing' is not a valid '-s' option"
+	fi
+
+	if [[ "$sequencing" == "paired" ]] && [[ $(( fastq_acm % 2 )) -ne 0 ]]; then
+		error "Option '-s paired' requires an even number of FASTQ files"
+	fi
+
+	if awk 'typeof($1) ~/number|strnum/ && $1>0 {exit(1)} {exit(0)}' <<< $threads; then
+		try_help_and_die "'$threads' is not a valid '-t' option"
+	fi
+}
+
+validate_dep() {
+	echo "I have no dep"
+}
+
+# Options
+output_dir=""
+fastq_list=""
+fastqs=()
+star_index=""
+threads=8
+sequencing="paired"
+
+# Processing variables
+cod="" # Current output dir
+
+[[ $# -eq 0 ]] && { usage; exit; }
+
+TEMP=$(getopt \
+	-o 'ho:t:s:D:f:' \
+	--long 'help,output-dir:,threads:,sequencing:,star-index:,fastq-list:' \
+	-n "$PROG_NAME $CMD_NAME" -- "$@") \
+	|| try_help_and_die
+
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+	case "$1" in
+		-h|--help)
+			usage
+			exit
+			;;
+		-o|--output-dir)
+			output_dir="$2"
+			shift 2
+			;;
+		-t|--threads)
+			threads="$2"
+			shift 2
+			;;
+		-s|--sequencing)
+			sequencing="$2"
+			shift 2
+			;;
+		-D|--star-index)
+			star_index="$2"
+			shift 2
+			;;
+		-f|--fastq-list)
+			fastq_list="$2"
+			shift 2
+			;;
+		--)
+			shift
+			break
+			;;
+		*)
+			error "Internal error!"
+			;;
+	esac
+done
+
+# Get the files if they were passed as arg
+for arg; do
+	fastqs+=("$arg")
+done
+
+# Check for errors
+validate_opt
+#validate_dep
+
+# MAIN
+
+# Load all files from $fastq_list file to $fastqs=()
+if [[ -n "$fastq_list" ]]; then
+	# Reset fastqs=() - just in case
+	fastqs=()
+	while read; do
+		fastqs+=("$REPLY")
+	done < "$fastq_list"
+fi
+
+# Output dir concerning this command
+cod="$output_dir/$CMD_NAME"
+
+# Create the base
+mkdir -p "$cod"
+
+run_star_and_filter() {
+	local r1="$1"
+	local filename
+	local star_read_cmd
+	local star_base_cmd
+
+	if [[ $(file -b --mime-type "$r1") = *gzip* ]]; then
+		star_read_cmd="zcat"
+		filename="$(basename "$r1" '.fastq.gz')"
+	else
+		star_read_cmd="cat"
+		filename="$(basename "$r1" '.fastq')"
+	fi
+
+	case "$sequencing" in
+		long)
+			star_base_cmd='
+				STARlong
+					--seedPerReadNmax 10000
+					--readNameSeparator ,'
+			;;
+		*)
+			star_base_cmd='STAR'
+			;;
+	esac
+
+	log_info "STAR align '$@' with index at '$star_index'"
+
+	$star_base_cmd \
+		--runMode 'alignReads' \
+		--readFilesCommand "$star_read_cmd" \
+		--runThreadN $threads \
+		--outSAMtype 'BAM' 'SortedByCoordinate' \
+		--genomeDir "$star_index" \
+		--outFileNamePrefix "$cod/$filename." \
+		--readFilesIn "$@" \
+		--outSAMstrandField 'intronMotif' \
+		--outSAMattributes 'NH' 'HI' 'AS' 'nM' 'MD' 'XS' \
+		> "$cod/$filename.log" 2>&1 \
+		|| log_error "STAR failed:" \
+				"See '$(readlink -f "$cod/$filename.log")'" \
+				"for more details"
+
+	log_info \
+		"Filter '$cod/$filename.Aligned.sortedByCoord.out.bam': " \
+		"mapping quality >= 255"
+
+	samtools view -h -b -q 255 \
+		-o "$cod/$filename.$PROG_NAME.bam" \
+		"$cod/$filename.Aligned.sortedByCoord.out.bam" \
+		|| log_error \
+				"samtools view failed on " \
+				"'$cod/$filename.Aligned.sortedByCoord.out.bam'"
+}
+
+log_info 'Running STAR'
+
+case "$sequencing" in
+	paired)
+		for (( i=0; i<${#fastqs[@]}; i+=2 )); do
+			run_star_and_filter "${fastqs[$i]}" "${fastqs[$(( i+1 ))]}"
+		done
+		;;
+	*)
+		for fastq in "${fastqs[@]}"; do
+			run_star_and_filter "$fastq"
+		done
+		;;
+esac
+
+log_info "Done"
