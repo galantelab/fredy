@@ -13,6 +13,10 @@ PROG_NAME='freddie'
 ## Our current version
 VERSION='1.0.0-dev7'
 
+## Where to find local scripts
+SCRIPTS_R='scripts/R'
+SCRIPTS_PYTHON='scripts/python'
+
 # Print:
 # script [func], if CMD_NAME and $1 are defined
 # script func, if CMD_NAME is defined
