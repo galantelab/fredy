@@ -6,10 +6,10 @@ set -o pipefail
 set -o nounset
 
 # Where I am
-ROOT_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
+BIN_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
 
 # Load common lib
-source "$ROOT_DIR/lib/freddie_common"
+source "$BIN_DIR/../lib/freddie_common"
 
 usage() {
 	echo "$PROG_NAME $VERSION"
@@ -82,7 +82,7 @@ parse_cmd() {
 			;;
 	esac
 
-	exec "$ROOT_DIR/bin/${PROG_NAME}_${cmd}" "$@"
+	exec "$BIN_DIR/${PROG_NAME}_${cmd}" "$@"
 }
 
 [[ $# -eq 0 ]] && { usage; exit; }
