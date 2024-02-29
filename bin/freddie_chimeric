@@ -278,7 +278,7 @@ fgrep -w \
 
 #Classificando internal initial e final
 log_info "Generate '$tdir/info_bed_novel.txt'"
-python3 "$BIN_DIR/../scripts/bed_novel.py" \
+python3 "$BIN_DIR/../$SCRIPTS_PYTHON/bed_novel.py" \
 	"$tdir/chimeric.gtf" \
 	> "$tdir/info_bed_novel.txt" \
 	|| log_error "'bed_novel.py' failed"

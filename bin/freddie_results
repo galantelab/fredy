@@ -200,7 +200,7 @@ awk -v OFS="\t" '
 	> "$tdir/nsamplespertranscript.tsv"
 
 log_info "Step2"
-Rscript "$BIN_DIR/../scripts/median.R" \
+Rscript "$BIN_DIR/../$SCRIPTS_R/median.R" \
 	"$expression_expression_tsv" \
 	"$cod/median.tsv" \
 	|| log_error "median.R failed"
@@ -303,7 +303,7 @@ for i in $(cut -f 4 "$tdir/most_shared.tsv" | sort -u); do
 		"$expression_expression_tsv" \
 		>> "$tdir/host_expression"
 
-	Rscript "$BIN_DIR/../scripts/psi.R" \
+	Rscript "$BIN_DIR/../$SCRIPTS_R/psi.R" \
 		"$tdir/host_expression" \
 		"$tdir/chimeric_expression" \
 		"$i" \
@@ -368,7 +368,7 @@ for i in $(awk '$2>=0.15{print $1}' "$tdir/psi.tsv" | sort -u) ; do
 		"$expression_expression_tsv" \
 		>> "$tdir/host_expression"
 
-	Rscript "$BIN_DIR/../scripts/boxplot.R" \
+	Rscript "$BIN_DIR/../$SCRIPTS_R/boxplot.R" \
 		"$tdir/host_expression" \
 		"$tdir/chimeric_expression" \
 		"$cod/figures/$i.svg" \

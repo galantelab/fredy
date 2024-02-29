@@ -251,7 +251,7 @@ while read gene trans host; do
 		#"$trans" \
 		#> "$tdir/$trans.$host.pfam.tsv" \
 		#|| log_error "'comp_dom.py' failed"
-	python3 "$BIN_DIR/../scripts/comp_dom.py" \
+	python3 "$BIN_DIR/../$SCRIPTS_PYTHON/comp_dom.py" \
 		"$tdir/$trans.$host.txt" \
 		"$trans" \
 		|| log_error "'comp_dom.py' failed"
