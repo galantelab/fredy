@@ -22,6 +22,7 @@ usage() {
 	echo "  -V, --version    Print current version"
 	echo ""
 	echo "Commands:"
+	echo "  star             Align sequenced reads"
 	echo "  string           Assemble sequenced reads"
 	echo "  chimeric         Find potential chimeric transcripts"
 	echo "  coding           Estimate the chance of a coding chimeric"
@@ -69,6 +70,7 @@ parse_cmd() {
 	local cmd="$1"; shift
 
 	case "$cmd" in
+		star)       ;;
 		string)     ;;
 		chimeric)   ;;
 		coding)     ;;
