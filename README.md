@@ -19,7 +19,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/rmercuri/freddie">
-    <img src="images/freddie.jpg" alt="Logo" width="80" height="80">
+    <img src="assets/img/freddie.jpg" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">Freddie</h3>
@@ -74,7 +74,7 @@
 Freddie is a user-friendly pipeline designed to identify, quantify, and analyze chimeric transcripts from RNA-Seq data. The pipeline utilizes well-established tools such as StringTie2 for transcriptome assembly and quantification. In addition, machine learning algorithms provided by RNASamba are used to predict whether a transcript is coding. To further enhance the analysis, Freddie also incorporates HMMER and Python3 scripts to compare protein domains and identify potential alterations. With these tools, Freddie provides a comprehensive approach to chimeric transcript analysis that is both efficient and effective.
 
 <a href="https://github.com/rmercuri/freddie">
-    <img src="images/Workflow.jpg" alt="Workflow" width="1800" height="500">
+    <img src="assets/img/Workflow.jpg" alt="Workflow" width="1800" height="500">
 </a>
 
 <!-- INSTALLATION -->
@@ -139,7 +139,7 @@ Options | Description
 Within the "chimeric" subcommand, Freddie conducts a search for events that have not been previously annotated in the reference transcriptome and possess a 50% overlap with the desired event position. This can include events such as Mobile Elements or Retrocopies. Additionally, Freddie also searches for events that possess a 50% overlap with both the event and the exon. Following the identification of these novel transcripts, they are compared to the annotated transcripts within the same region. This allows Freddie to determine which transcript is the most similar and in which region of the novel transcript the event was found. Specifically, the location of the event within the novel transcript is identified as either initial, internal, or final, depending on its position within the transcript. This thorough approach allows for the comprehensive analysis of chimeric events and enhances the accuracy of the results.
 
 <a href="https://github.com/rmercuri/freddie">
-    <img src="images/scheme_quimeric.jpg" alt="Chimeric transcript" width="1800" height="500">
+    <img src="assets/img/scheme_quimeric.jpg" alt="Chimeric transcript" width="1800" height="500">
 </a>
 
 The output of this subcommand are divided by 3 files:
@@ -263,4 +263,4 @@ Pedro Alexandre Favoretto Galante
 [license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/othneildrew
-[product-screenshot]: images/screenshot.png
+[product-screenshot]: assets/img/screenshot.png
