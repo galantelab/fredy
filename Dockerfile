@@ -1,46 +1,61 @@
-FROM antoniopcamargo/rnasamba:latest AS rnasamba-src
+FROM galantelab/rnasamba:0.2.5 AS rnasamba-src
 
 FROM ubuntu:20.04
 
 LABEL maintainer="tmiller@mochsl.org.br"
 
 # Copy python3.6 and rnasamba
-COPY --from=rnasamba-src /usr/local/bin/ /usr/local/bin
-COPY --from=rnasamba-src /usr/local/lib/ /usr/local/lib
+COPY --from=rnasamba-src /usr/local/ /usr/local
 
-# Install base, bedtools, gffread, hmmer, kallisto, r (ggplot2, reshape2), stringtie, parallel
-# Also install libffi6, required for python3.6
+ARG LIBFFI6_REPO=http://archive.ubuntu.com/ubuntu/pool/main/libf/libffi \
+    LIBFFI6=libffi6_3.2.1-8_amd64.deb \
+    STAR_REPO=https://github.com/alexdobin/STAR/archive/refs/tags \
+    STAR=2.7.7a
 
-RUN set -e; \
-    \
-    apt-get update; \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      --no-install-recommends \
-      bedtools \
-      gffread \
-      hmmer \
-      kallisto \
-      r-base \
-      r-base-core \
-      r-cran-ggplot2 \
-      r-cran-reshape2 \
-      stringtie \
-      seqtk \
-      parallel \
-      wget; \
-    wget -qP / \
-      http://archive.ubuntu.com/ubuntu/pool/main/libf/libffi/libffi6_3.2.1-8_amd64.deb; \
-    dpkg -i /libffi6_3.2.1-8_amd64.deb; \
-    apt-get clean; \
-    rm -rf /libffi6_3.2.1-8_amd64.deb /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Install base, bedtools, gffread, hmmer, kallisto, parallel,
+# r (ggplot2, reshape2), seqtk, stringtie, wget
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+       bedtools \
+       gffread \
+       hmmer \
+       kallisto \
+       parallel \
+       r-base \
+       r-base-core \
+       r-cran-ggplot2 \
+       r-cran-reshape2 \
+       seqtk \
+       stringtie \
+       wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN pip uninstall -y tensorflow
-RUN yes | pip install tensorflow==1.5
+# Install libffi6, required for python3.6
+RUN wget -qP /tmp ${LIBFFI6_REPO}/${LIBFFI6} \
+    && dpkg -i /tmp/${LIBFFI6} \
+    && rm -f /tmp/${LIBFFI6}
 
-VOLUME ["/app/freddie"]
+# Install STAR aligner
+RUN mkdir -p /tmp/${STAR} \
+    && wget -qO- ${STAR_REPO}/${STAR}.tar.gz \
+       | tar xz -C /tmp/${STAR} --strip-components 1 \
+    && install -m 755 /tmp/${STAR}/bin/Linux_x86_64_static/* /usr/local/bin \
+    && rm -rf /tmp/${STAR}
 
-COPY . /app/freddie
+# Get the freddie source
+COPY . /tmp/freddie/
 
-WORKDIR /home/
+# Install freddie to /usr/local
+RUN make -f /tmp/freddie/Makefile install 2> /dev/null \
+    && rm -rf /tmp/freddie
 
-ENTRYPOINT ["/app/freddie/freddie"]
+# Create freddie user
+RUN useradd -ms /bin/bash freddie
+USER freddie
+
+# Set our workdir
+VOLUME /home/freddie
+WORKDIR /home/freddie
+
+ENTRYPOINT ["freddie"]

@@ -4,7 +4,10 @@
 # Except the license
 !/LICENSE
 
+# Except the Makefile
+!/Makefile
+
 # Except the followings:
-!/ann
-!/freddie
+!/bin
+!/lib
 !/scripts
