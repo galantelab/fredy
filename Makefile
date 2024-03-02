@@ -5,8 +5,17 @@
 # Set the default shell
 SHELL := bash
 
+# Where I am
+ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+
+# Variables used during the installation
+PREFIX ?= /usr/local
+PROJECT_NAME := freddie
+INSTALL_DIR = $(DESTDIR)$(PREFIX)/share/$(PROJECT_NAME)
+BIN_DIR = $(DESTDIR)$(PREFIX)/bin
+
 # Get script version
-APP_VERSION := 	$(shell ./freddie --version)
+APP_VERSION := $(shell ./bin/freddie --version)
 
 # Get VCS latest tag
 VCS_VERSION := $(shell git describe --abbrev=0 --tags)
@@ -37,7 +46,38 @@ DOCKER_TAG := $(if $(VCS_IS_MAIN_BRANCH),latest,dev)
 .PHONY: help
 
 help:
-	@echo
+	@echo "Makefile for freddie project"
+	@echo ""
+	@echo "==> Installation"
+	@echo "install            Install freddie"
+	@echo "uninstall          Uninstall freddie"
+	@echo ""
+	@echo "==> Manage git"
+	@echo "git-check-status   Check if the wordir is dirty"
+	@echo "git-check-version  Check if there is a new version"
+	@echo "git-check-branch   Check if this is the main branch"
+	@echo "git-check          Check status, version and branch"
+	@echo "git-tag            Tag the new version"
+	@echo "git-release        Release the new tagged version"
+	@echo ""
+	@echo "==> Manage docker"
+	@echo "docker-build       Build a docker image"
+	@echo "docker-tag         Tag the docker image version"
+	@echo "docker-release     Push docker image to registry"
+	@echo ""
+
+.PHONY: install
+
+install:
+	mkdir -p $(INSTALL_DIR) $(BIN_DIR)
+	cp -r --preserve=mode $(ROOT_DIR)/{bin,lib,scripts} $(INSTALL_DIR)
+	ln -s $(INSTALL_DIR)/bin/* $(BIN_DIR)
+
+.PHONY: uninstall
+
+uninstall:
+	rm -rf $(INSTALL_DIR)
+	rm -f $(addprefix $(BIN_DIR)/, $(notdir $(wildcard $(ROOT_DIR)/bin/*)))
 
 .PHONY: git-release
 
@@ -52,7 +92,7 @@ git-tag:
 
 .PHONY: git-check-branch
 
-git-checkout-branch:
+git-check-branch:
 	@if [[ "$(VCS_IS_MAIN_BRANCH)" -eq 1 ]]; then \
 		echo I only release from $(VCS_MAIN_BRANCH); \
 		echo Use 'git checkout $(VCS_MAIN_BRANCH)' before release; \
