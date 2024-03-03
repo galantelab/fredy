@@ -13,7 +13,7 @@ ARG LIBFFI6_REPO=http://archive.ubuntu.com/ubuntu/pool/main/libf/libffi \
     STAR=2.7.7a
 
 # Install base, bedtools, gffread, hmmer, kallisto, parallel,
-# r (ggplot2, reshape2), seqtk, stringtie, wget
+# r (ggplot2, reshape2), samtools, seqtk, stringtie, wget
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
        bedtools \
@@ -25,6 +25,7 @@ RUN apt-get update \
        r-base-core \
        r-cran-ggplot2 \
        r-cran-reshape2 \
+       samtools \
        seqtk \
        stringtie \
        wget \
