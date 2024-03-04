@@ -12,11 +12,13 @@ ARG LIBFFI6_REPO=http://archive.ubuntu.com/ubuntu/pool/main/libf/libffi \
     STAR_REPO=https://github.com/alexdobin/STAR/archive/refs/tags \
     STAR=2.7.7a
 
-# Install base, bedtools, gffread, hmmer, kallisto, parallel,
-# r (ggplot2, reshape2), samtools, seqtk, stringtie, wget
+# Install base, bedtools, gawk, gffread, hmmer, kallisto,
+# parallel, r (ggplot2, reshape2), samtools, seqtk,
+# stringtie, wget
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
        bedtools \
+       gawk \
        gffread \
        hmmer \
        kallisto \
