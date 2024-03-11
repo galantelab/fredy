@@ -26,25 +26,29 @@ usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
 	echo ""
-	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-T DIR] [-y STRING]"
-	echo "       $name_space -o DIR -g FILE -G FILE -i FILE"
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-T DIR] [-r] [-R] -o DIR"
+	echo "       $name_space -a FILE -g FILE -e FILE"
 	echo ""
 	echo "Mandatory Options:"
-	echo "  -o, --output-dir       Output directory. Create the directory"
-	echo "                         if it does not exist"
-	echo "  -g, --gtf              Gene annotation on the reference genome"
-	echo "                         in GTF format"
-	echo "  -G, --reference-file   FASTA file for the reference genome"
-	echo "  -i, --bed              Events input in BED4 format"
+	echo "  -o, --output-dir       Output directory which must have been"
+	echo "                         created in the previous steps"
+	echo "  -a, --annotation       Gene annotation for the reference"
+	echo "                         transcriptome in GTF format"
+	echo "  -g, --genome           FASTA file of the reference genome,"
+	echo "                         which is the same file used for reads"
+	echo "                         alignment using STAR"
+	echo "  -e, --stringtie-out    StringTie2 output events file in BED4"
+	echo "                         format"
 	echo ""
 	echo "Options:"
 	echo "  -h, --help             Print this help"
 	echo "  -T, --temp-dir         Use DIR for temporaries [default: $temp_dir]"
-	echo "  -y, --chimeric-filter  Filter to be considered a chimeric event"
-	echo "                         (default or strict). 'default' - 50% overlap"
-	echo "                         of the event in the exon; 'strict' - 50%"
-	echo "                         overlap of the event in the exon and of the"
-	echo "                         exon in the event [default: $type]"
+	echo "  -r, --reciprocal       Criteria for identifying chimeric events"
+	echo "                         is 50% overlap of the event with the exon"
+	echo "                         and 50% overlap of the exon with the event"
+	echo "  -R, --irreciprocal     Criteria for identifying chimeric events"
+	echo "                         is 50% overlap of the event with the exon"
+	echo "                         [default]"
 	echo ""
 }
 
@@ -58,26 +62,28 @@ validate_opt() {
 	fi
 
 	if [[ -z "$gtf" ]]; then
-		try_help_and_die "Missing '-g' option"
+		try_help_and_die "Missing '-a' option"
 	elif [[ ! -f "$gtf" ]]; then
 		error "No such file '$gtf'"
 	fi
 
 	if [[ -z "$genome" ]]; then
-		try_help_and_die "Missing '-G' option"
+		try_help_and_die "Missing '-g' option"
 	elif [[ ! -f "$genome" ]]; then
 		error "No such file '$genome'"
 	fi
 
 	if [[ -z "$input" ]]; then
-		try_help_and_die "Missing '-i' option"
+		try_help_and_die "Missing '-e' option"
 	elif [[ ! -f "$input" ]]; then
 		error "No such file '$input'"
 	fi
 
 	# Options
-	if [[ ! "$type" =~ ^(strict|default)$ ]]; then
-		try_help_and_die "'$type' is not a valid '-y' option"
+	if [[ "$is_reciprocal" && "$is_irreciprocal" ]]; then
+		try_help_and_die "Both '-r' and '-R' are set." \
+			"You need to choose between reciprocal and" \
+			"irreciprocal criteria"
 	fi
 }
 
@@ -95,7 +101,8 @@ temp_dir="/tmp"
 input="" # BED
 gtf=""
 genome=""
-type="default"
+is_reciprocal=
+is_irreciprocal=
 
 # Processing variables
 cod="" # Current output dir
@@ -106,8 +113,9 @@ string_merge_gtf=""
 [[ $# -eq 0 ]] && { usage; exit; }
 
 TEMP=$(getopt \
-	-o 'hT:o:i:g:G:y:' \
-	--long 'help,temp-dir:,output-dir:,bed:,gtf:,reference-file:,chimeric-filter:' \
+	-o 'hT:o:e:a:g:rR' \
+	--long 'help,temp-dir:,output-dir:,stringtie-out:,annotation:,
+		genome:,reciprocal,irreciprocal' \
 	-n "$PROG_NAME $CMD_NAME" -- "$@") \
 	|| try_help_and_die
 
@@ -128,21 +136,25 @@ while true; do
 			output_dir="$2"
 			shift 2
 			;;
-		-i|--bed)
+		-e|--stringtie-out)
 			input="$2"
 			shift 2
 			;;
-		-g|--gtf)
+		-a|--annotation)
 			gtf="$2"
 			shift 2
 			;;
-		-G|--reference-file)
+		-g|--genome)
 			genome="$2"
 			shift 2
 			;;
-		-y|--chimeric-filter)
-			type="$2"
-			shift 2
+		-r|--reciprocal)
+			is_reciprocal=1
+			shift
+			;;
+		-R|--irreciprocal)
+			is_irreciprocal=1
+			shift
 			;;
 		--)
 			shift
@@ -153,6 +165,11 @@ while true; do
 			;;
 	esac
 done
+
+# Default value is '--irreciprocal'
+if [[ -z "$is_reciprocal" && -z "$is_irreciprocal" ]]; then
+	is_irreciprocal=1
+fi
 
 # Check for errors in opt
 validate_opt
@@ -165,7 +182,7 @@ validate_dep
 
 # MAIN
 
-if [[ "$type" == "strict" ]]; then
+if [[ "$is_reciprocal" ]]; then
 	paramet='-r'
 fi
 
