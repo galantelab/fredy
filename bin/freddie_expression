@@ -26,30 +26,30 @@ usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
 	echo ""
-	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-T DIR] [-t INT] [-e STRING]"
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-T DIR] [-t INT] [-S] [-L]"
 	echo "       $name_space [-f FILE] -o DIR <FILE> ..."
 	echo ""
 	echo "Arguments:"
-	echo "  One or more alignment file in BAM format. If neither BAM"
-	echo "  files as argument nor the '-f' option was passed, this"
-	echo "  implies that the 'star' command has been executed and"
-	echo "  its BAM files will be used in the analysis"
+	echo "  One or more alignment files in BAM format. If no BAM files are"
+	echo "  provided as arguments and the '-f' option is not used, it is"
+	echo "  assumed that the 'star' command has been executed previously,"
+	echo "  and its resulting BAM files will be utilized in the analysis"
 	echo ""
 	echo "Mandatory Options:"
-	echo "  -o, --output-dir   Output directory. Create the directory"
-	echo "                     if it does not exist"
-	echo "  -f, --bam-list     File containing a newline separated list"
-	echo "                     of alignment files in BAM format. This"
-	echo "                     option is not mandatory if one or more"
-	echo "                     BAM files are passed as argument or if"
-	echo "                     the 'star' command has been executed"
+	echo "  -o, --output-dir    Output directory which must have been"
+	echo "                      created in the previous steps"
+	echo "  -f, --file          File containing a newline separated list"
+	echo "                      of alignment files in BAM format. This"
+	echo "                      option is not mandatory if one or more"
+	echo "                      BAM files are passed as argument or if"
+	echo "                      the 'star' command has been executed"
 	echo ""
 	echo "Options:"
-	echo "  -h, --help         Print this help"
-	echo "  -T, --temp-dir     Use DIR for temporaries [default: $temp_dir]"
-	echo "  -t, --threads      Number of threads [default: $threads]"
-	echo "  -e, --experiment   Type of reads (short or long)"
-	echo "                     [default: $experiment]"
+	echo "  -h, --help          Print this help"
+	echo "  -T, --temp-dir      Use DIR for temporaries [default: $temp_dir]"
+	echo "  -t, --threads       Number of threads [default: $threads]"
+	echo "  -S, --short-reads   Set the sequencing to short reads [default]"
+	echo "  -L, --long-reads    Set the sequencing to long reads"
 	echo ""
 }
 
@@ -96,8 +96,9 @@ validate_opt() {
 	fi
 
 	# Options
-	if [[ ! "$experiment" =~ ^(short|long)$ ]]; then
-		try_help_and_die "'$experiment' is not a valid '-e' option"
+	if [[ "$is_short" && "$is_long" ]]; then
+		try_help_and_die "Both '-S' and '-L' are set." \
+			"You need to choose between short and long reads"
 	fi
 
 	if awk 'typeof($1) ~/number|strnum/ && $1>0 {exit(1)} {exit(0)}' <<< $threads; then
@@ -116,10 +117,11 @@ validate_dep() {
 output_dir=""
 temp_dir="/tmp"
 threads=8
-experiment="short"
 bam_list=""
 bams_star=()
 bams=()
+is_short=
+is_long=
 
 # Processing variables
 cod="" # Current output dir
@@ -134,8 +136,8 @@ string_merge_gtf=""
 [[ $# -eq 0 ]] && { usage; exit; }
 
 TEMP=$(getopt \
-	-o 'hT:o:t:e:f:' \
-	--long 'help,temp-dir:,output-dir:,threads:,experiment:,bam-list:' \
+	-o 'hT:o:t:SLf:' \
+	--long 'help,temp-dir:,output-dir:,threads:,short-reads,long-reads,file:' \
 	-n "$PROG_NAME $CMD_NAME" -- "$@") \
 	|| try_help_and_die
 
@@ -156,7 +158,7 @@ while true; do
 			output_dir="$2"
 			shift 2
 			;;
-		-f|--bam-list)
+		-f|--file)
 			bam_list="$2"
 			shift 2
 			;;
@@ -164,9 +166,13 @@ while true; do
 			threads="$2"
 			shift 2
 			;;
-		-e|--experiment)
-			experiment="$2"
-			shift 2
+		-S|--short-reads)
+			is_short=1
+			shift
+			;;
+		-L|--long-reads)
+			is_long=1
+			shift
 			;;
 		--)
 			shift
@@ -188,6 +194,11 @@ if [[ -d "$output_dir/star" ]]; then
 	mapfile \
 		-t bams_star \
 		< <(find "$output_dir/star" -name "*.$PROG_NAME.bam" -type 'f')
+fi
+
+# Default value is '--short-reads'
+if [[ -z "$is_short" && -z "$is_long" ]]; then
+	is_short=1
 fi
 
 # Check for errors in opt
@@ -217,7 +228,7 @@ fi
 # Sort bams=()
 bams=($(printf "%s\0" "${bams[@]}" | sort -z | xargs -0n1))
 
-if [[ "$experiment" == "long" ]]; then
+if [[ "$is_long" ]]; then
 	paramet+=" -L"
 fi
 
@@ -262,22 +273,7 @@ if [[ "$?" -ne 0 ]]; then
 fi
 
 log_info 'Merging samples ...'
-#parallel \
-	#--max-procs=$parallel_max_procs \
-	#--joblog="$cod/merge_job.log" \
-	#awk -v OFS='\t' '
-		#{
-			#if ($12 ~/ENST/ && $3 == "transcript")
-				#print $10,$12,$20;
-			#else if ($12 ~/MSTRG/ && $3 == "transcript")
-				#print $10,$12,$18
-		#}' \
-	#'{}' \
-	#'|' sed 's/;//g' \
-	#'|' sed 's/\"//g' \
-	#'|' sort -k1,1 \
-	#'>' "$cod"/'{/.}'.tsv \
-	#::: "$cod"/*.gtf
+
 merge_sample() {
 	awk -v OFS='\t' '
 		$3 == "transcript" {
