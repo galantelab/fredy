@@ -23,26 +23,34 @@ usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
 	echo ""
-	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-t INT] [-s STRING] [-f FILE]"
-	echo "       $name_space -o DIR -D DIR <FILE> ..."
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-t INT] [-S] [-L] [-s] [-p]"
+	echo "       $name_space [-f FILE] -o DIR -i DIR <FILE> ..."
 	echo ""
 	echo "Arguments:"
-	echo "  One or more sequencing file in FASTQ format"
+	echo "  One or more sequencing files in FASTQ format"
 	echo ""
 	echo "Mandatory Options:"
-	echo "  -o, --output-dir   Output directory. Create the directory"
-	echo "                     if it does not exist"
-	echo "  -D, --star-index   STAR index directory"
-	echo "  -f, --fastq-list   File containing a newline separated list"
-	echo "                     of sequencing files in FASTQ format. This"
-	echo "                     option is not mandatory if one or more"
-	echo "                     FASTQ files are passed as argument"
+	echo "  -o, --output-dir    Output directory. Create the directory"
+	echo "                      if it does not exist"
+	echo "  -i, --index-dir     STAR index directory"
+	echo "  -f, --file          File containing a newline separated list"
+	echo "                      of sequencing files in FASTQ format. This"
+	echo "                      option is not mandatory if one or more"
+	echo "                      FASTQ files are passed as argument"
 	echo ""
 	echo "Options:"
-	echo "  -h, --help         Print this help"
-	echo "  -t, --threads      Number of threads [default: $threads]"
-	echo "  -s, --sequencing   Type of sequencing (paired, single, long)"
-	echo "                     [default: $sequencing]"
+	echo "  -h, --help          Print this help"
+	echo "  -t, --threads       Number of threads [default: $threads]"
+	echo "  -S, --short-reads   Set the sequencing to short reads [default]"
+	echo "  -L, --long-reads    Set the sequencing to long reads"
+	echo "  -s, --single-end    For short reads '-S', set the type of"
+	echo "                      sequencing to single-end"
+	echo "  -p, --paired-end    For short reads '-S', set the type of"
+	echo "                      sequencing to paired-end. In this case,"
+	echo "                      the FASTQ files will be processed, being"
+	echo "                      considered forward (R1) and reverse"
+	echo "                      complement (R2) according to the order in"
+	echo "                      which they are passed [default]"
 	echo ""
 }
 
@@ -78,19 +86,29 @@ validate_opt() {
 		done < "$fastq_list"
 	fi
 
-	if [[ -z "$star_index" ]]; then
-		try_help_and_die "Missing '-D' option"
-	elif [[ ! -d "$star_index" ]]; then
-		error "No such dir '$star_index'"
+	if [[ -z "$index_dir" ]]; then
+		try_help_and_die "Missing '-i' option"
+	elif [[ ! -d "$index_dir" ]]; then
+		error "No such dir '$index_dir'"
 	fi
 
 	# Options
-	if [[ ! "$sequencing" =~ ^(paired|single|long)$ ]]; then
-		try_help_and_die "'$sequencing' is not a valid '-s' option"
+	if [[ "$is_short" && "$is_long" ]]; then
+		try_help_and_die "Both '-S' and '-L' are set." \
+			"You need to choose between short and long reads"
 	fi
 
-	if [[ "$sequencing" == "paired" ]] && [[ $(( fastq_acm % 2 )) -ne 0 ]]; then
-		error "Option '-s paired' requires an even number of FASTQ files"
+	if [[ "$is_long" && ("$is_single" || "$is_paired") ]]; then
+		try_help_and_die "Options '-s' and 'p' are used strictly with short reads '-S'"
+	fi
+
+	if [[ "$is_single" && "$is_paired" ]]; then
+		try_help_and_die "Both '-s' and '-p' are set." \
+			"You need to choose between sngle-end and paired-end"
+	fi
+
+	if [[ "$is_paired" ]] && [[ $(( fastq_acm % 2 )) -ne 0 ]]; then
+		error "Option '-p', paired-end, requires an even number of FASTQ files"
 	fi
 
 	if awk 'typeof($1) ~/number|strnum/ && $1>0 {exit(1)} {exit(0)}' <<< $threads; then
@@ -106,9 +124,12 @@ validate_dep() {
 output_dir=""
 fastq_list=""
 fastqs=()
-star_index=""
+index_dir=""
 threads=8
-sequencing="paired"
+is_short=
+is_long=
+is_single=
+is_paired=
 
 # Processing variables
 cod="" # Current output dir
@@ -116,8 +137,9 @@ cod="" # Current output dir
 [[ $# -eq 0 ]] && { usage; exit; }
 
 TEMP=$(getopt \
-	-o 'ho:t:s:D:f:' \
-	--long 'help,output-dir:,threads:,sequencing:,star-index:,fastq-list:' \
+	-o 'ho:t:SLspi:f:' \
+	--long 'help,output-dir:,threads:,short-reads,long-reads,
+		single-end,paired-end,index-dir:,file:' \
 	-n "$PROG_NAME $CMD_NAME" -- "$@") \
 	|| try_help_and_die
 
@@ -138,15 +160,27 @@ while true; do
 			threads="$2"
 			shift 2
 			;;
-		-s|--sequencing)
-			sequencing="$2"
+		-S|--short-reads)
+			is_short=1
+			shift
+			;;
+		-L|--long-reads)
+			is_long=1
+			shift
+			;;
+		-s|--single-end)
+			is_single=1
+			shift
+			;;
+		-p|--paired-end)
+			is_paired=1
+			shift
+			;;
+		-i|--index-dir)
+			index_dir="$2"
 			shift 2
 			;;
-		-D|--star-index)
-			star_index="$2"
-			shift 2
-			;;
-		-f|--fastq-list)
+		-f|--file)
 			fastq_list="$2"
 			shift 2
 			;;
@@ -164,6 +198,16 @@ done
 for arg; do
 	fastqs+=("$arg")
 done
+
+# Default value is '--short-reads'
+if [[ -z "$is_short" && -z "$is_long" ]]; then
+	is_short=1
+fi
+
+# Default value is '--paired-end'
+if [[ "$is_short" && -z "$is_single" && -z "$is_paired" ]]; then
+	is_paired=1
+fi
 
 # Check for errors
 validate_opt
@@ -200,26 +244,23 @@ run_star_and_filter() {
 		filename="$(basename "$r1" '.fastq')"
 	fi
 
-	case "$sequencing" in
-		long)
-			star_base_cmd='
-				STARlong
-					--seedPerReadNmax 10000
-					--readNameSeparator ,'
-			;;
-		*)
-			star_base_cmd='STAR'
-			;;
-	esac
+	if [[ "$is_long" ]]; then
+		star_base_cmd='
+			STARlong
+				--seedPerReadNmax 10000
+				--readNameSeparator ,'
+	else
+		star_base_cmd='STAR'
+	fi
 
-	log_info "STAR align '$@' with index at '$star_index'"
+	log_info "STAR align '$@' with index at '$index_dir'"
 
 	$star_base_cmd \
 		--runMode 'alignReads' \
 		--readFilesCommand "$star_read_cmd" \
 		--runThreadN $threads \
 		--outSAMtype 'BAM' 'SortedByCoordinate' \
-		--genomeDir "$star_index" \
+		--genomeDir "$index_dir" \
 		--outFileNamePrefix "$cod/$filename." \
 		--readFilesIn "$@" \
 		--outSAMstrandField 'intronMotif' \
@@ -243,17 +284,14 @@ run_star_and_filter() {
 
 log_info 'Running STAR'
 
-case "$sequencing" in
-	paired)
-		for (( i=0; i<${#fastqs[@]}; i+=2 )); do
-			run_star_and_filter "${fastqs[$i]}" "${fastqs[$(( i+1 ))]}"
-		done
-		;;
-	*)
-		for fastq in "${fastqs[@]}"; do
-			run_star_and_filter "$fastq"
-		done
-		;;
-esac
+if [[ "$is_paired" ]]; then
+	for (( i=0; i<${#fastqs[@]}; i+=2 )); do
+		run_star_and_filter "${fastqs[$i]}" "${fastqs[$(( i+1 ))]}"
+	done
+else
+	for fastq in "${fastqs[@]}"; do
+		run_star_and_filter "$fastq"
+	done
+fi
 
 log_info "Done"
