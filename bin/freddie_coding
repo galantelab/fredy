@@ -25,18 +25,20 @@ usage() {
 	echo "$PROG_NAME $VERSION"
 	echo "$PROG_NAME $CMD_NAME (aka $SCRIPT_NAME)"
 	echo ""
-	echo "Usage: $PROG_NAME $CMD_NAME [-h] -o DIR -m FILE -d FILE"
+	echo "Usage: $PROG_NAME $CMD_NAME [-h] [-P NUM] -o DIR -m FILE -d FILE"
 	echo ""
 	echo "Mandatory Options:"
-	echo "  -o, --output-dir      Output directory. Create the directory"
-	echo "                        if it does not exist"
+	echo "  -o, --output-dir      Output directory which must have been"
+	echo "                        created in the previous steps"
 	echo "  -m, --protein-model   File with the model of RNASamba"
 	echo "  -d, --protein-db      File with the protein sequences"
 	echo ""
 	echo "Options:"
 	echo "  -h, --help            Print this help"
-	echo "  -F, --coding-filter   Filter transcripts with probability"
-	echo "                        of being protein-coding [default: $coding_filter]"
+	echo "  -P, --probability     Set the cutoff for selecting transcripts"
+	echo "                        considered to be protein-coding, based"
+	echo "                        on the probability provided by RNASamba"
+	echo "                        [default: $coding_filter]"
 	echo ""
 }
 
@@ -61,9 +63,9 @@ validate_opt() {
 		error "No such file '$protein_db'"
 	fi
 
-	# Options '-F'
+	# Options '-P'
 	if awk 'typeof($1) ~/number|strnum/ && $1>=0 && $1<=1 {exit(1)} {exit(0)}' <<< $coding_filter; then
-		try_help_and_die "'$coding_filter' is not a valid '-F' option"
+		try_help_and_die "'$coding_filter' is not a valid '-P' option"
 	fi
 }
 
@@ -94,8 +96,8 @@ chimeric_most_shared_tsv=""
 [[ $# -eq 0 ]] && { usage; exit; }
 
 TEMP=$(getopt \
-	-o 'ho:m:d:F:' \
-	--long 'help,output-dir:,protein-model:,protein-db:,coding-filter:' \
+	-o 'ho:m:d:P:' \
+	--long 'help,output-dir:,protein-model:,protein-db:,probability:' \
 	-n "$PROG_NAME $CMD_NAME" -- "$@") \
 	|| try_help_and_die
 
@@ -120,7 +122,7 @@ while true; do
 			protein_db="$2"
 			shift 2
 			;;
-		-F|--coding-filter)
+		-P|--probability)
 			coding_filter="$2"
 			shift 2
 			;;
