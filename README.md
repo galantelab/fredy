@@ -215,6 +215,7 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <genome-file-path>:/home/freddie/ref_fa/ -v <events-file-path>:/home/freddie/events/ -v <output-path>:/home/freddie/output/ freddie chimeric -o test -g /home/freddie/gtf/<gtf-file> -G /home/freddie/ref_fa/<genome-file> -i /home/freddie/events/<event-file>`
 
 Whereas:
+
 `<gtf-file-path>` is the directory where gtf was downloaded. Ex.: if `$PWD/gencodev36.annotation.gtf` type `$PWD/`
 
 `<genome-file-path>` is the directory where the reference genome and reference genome index were downloaded. Ex.: if `$PWD/hg38.fa` type `$PWD/`
@@ -246,6 +247,7 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <rnasambamodel-file-path>:/home/freddie/rnasamba/ -v <proteinseq-file-path>:/home/freddie/proteinseq/ -v <output-path>:/home/freddie/output/ freddie coding -o test -m /home/freddie/rnasamba/<rnasambamodel-file> -d /home/freddie/proteinseq/<proteinseq-file>`
 
 Whereas:
+
 `<rnasambamodel-file-path>` is the directory where rnasamba model was downloaded. Ex.: if `$PWD/model.hdf5` type `$PWD/`
 
 `<proteinseq-file-path>` is the directory where the proteinseq was downloaded. Ex.: if `$PWD/hg38.pep.fa` type `$PWD/`
@@ -274,6 +276,7 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/freddie/pfammodel/ -v <output-path>:/home/freddie/output/ freddie pfam -o test -M <pfammodel-file>`
 
 Whereas:
+
 `<pfammodel-file-path>` is the directory where pfam model was downloaded. Ex.: if `$PWD/Pfam-A.hmm` type `$PWD/`
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
@@ -299,6 +302,7 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie expression -o test`
 
 Whereas:
+
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
 ### Results
@@ -316,6 +320,7 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie results -o test`
 
 Whereas:
+
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
 <!-- LICENSE -->
