@@ -132,7 +132,7 @@ expression | Estimate transcript expression using StringTie2 (DOI: 10.1186/s1305
 results | Compile the final results of chimeric transcripts incorporating inputs from previous steps
 
 <!-- RUNNING -->
-## star
+## Star
 The first step in the FREDDIE’s pipeline is the “star”. The inputs to this command are FASTQ files and a STAR index (pre-made available at: www.bioinfo.mochsl.org.br/freddiesdata/STAR_index/). The sorted and filtered BAM  aligned file resulting from this command will become the input to the next step. This command supports all types of RNA-Seq data (paired-end, single-end and long-reads), either compressed (.gz) or not.
 
 star options are:
@@ -155,15 +155,15 @@ Short options | Long options | Description
 
 Whereas:
 
-`<star_index-path> is the directory where star_index was downloaded. Ex.: $PWD/star_index/`
+<star_index-path> is the directory where star_index was downloaded. Ex.: $PWD/star_index/
 
-`<fastq-file-path> is the directory where all fastq files are. Ex.: if $PWD/*fastq.gz type $PWD/`
+<fastq-file-path> is the directory where all fastq files are. Ex.: if $PWD/*fastq.gz type $PWD/
 
-`<output-path> is the output directory. Ex.: $PWD/output/`
+<output-path> is the output directory. Ex.: $PWD/output/
 
-`<fastq-path> is a .txt file inside /home/freddie/input/ with the docker path (somethig like /home/freddie/input/test.fastq.gz) to the fastq files.`
+<fastq-path> is a .txt file inside /home/freddie/input/ with the docker path (somethig like /home/freddie/input/test.fastq.gz) to the fastq files.
 
-### string  
+### String  
 The next step in the pipeline is “string”. This command performs a transcriptome assembly with the BAMs generated in the previous step (or custom BAMs provided by the user). The output of this analysis is a GTF file representing the transcriptome from all samples.
 
 String options are:
@@ -184,11 +184,11 @@ Short options | Long options | Description
 
 Whereas:
 
-`<gtf-file-path> is the directory where gtf was downloaded. Ex.: if $PWD/gencodev36.annotation.gtf type $PWD/`
+<gtf-file-path> is the directory where gtf was downloaded. Ex.: if $PWD/gencodev36.annotation.gtf type $PWD/
 
-`<output-path> is the output directory. Ex.: $PWD/output/`
+<output-path> is the output directory. Ex.: $PWD/output/
 
-`<gtf-file> is a gtf inside /home/freddie/gtf/. Ex.: /home/freddie/gtf/gencodev36.annotation.gtf`
+<gtf-file> is a gtf inside /home/freddie/gtf/. Ex.: /home/freddie/gtf/gencodev36.annotation.gtf
 
 ### Chimeric
 In the “chimeric” step, the pipeline identifies novel transcripts based on the GTF file generated from the “string” command. Here, FREDDIE uses a list of events provided by the user to find transcripts with overlap between exons and the given events. Again, a GTF file and also a FASTA file with all transcripts found are the outputs provided.
@@ -215,19 +215,19 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <genome-file-path>:/home/freddie/ref_fa/ -v <events-file-path>:/home/freddie/events/ -v <output-path>:/home/freddie/output/ freddie chimeric -o test -g /home/freddie/gtf/<gtf-file> -G /home/freddie/ref_fa/<genome-file> -i /home/freddie/events/<event-file>`
 
 Whereas:
-`<gtf-file-path> is the directory where gtf was downloaded. Ex.: if $PWD/gencodev36.annotation.gtf type $PWD/`
+<gtf-file-path> is the directory where gtf was downloaded. Ex.: if $PWD/gencodev36.annotation.gtf type $PWD/
 
-`<genome-file-path> is the directory where the reference genome and reference genome index were downloaded. Ex.: if $PWD/hg38.fa type $PWD/`
+<genome-file-path> is the directory where the reference genome and reference genome index were downloaded. Ex.: if $PWD/hg38.fa type $PWD/
 
-`<events-file-path> is the directory where the events are. Ex.: if $PWD/events.bed type $PWD/`
+<events-file-path> is the directory where the events are. Ex.: if $PWD/events.bed type $PWD/
 
-`<output-path> is the output directory. Ex.: $PWD/output/`
+<output-path> is the output directory. Ex.: $PWD/output/
 
-`<gtf-file> is a gtf inside /home/freddie/gtf/. Ex.: /home/freddie/gtf/gencodev36.annotation.gtf`
+<gtf-file> is a gtf inside /home/freddie/gtf/. Ex.: /home/freddie/gtf/gencodev36.annotation.gtf
 
-`<genome-file> is a .fa inside /home/freddie/ref_fa/. Ex.: /home/freddie/ref_fa/hg38.fa`
+<genome-file> is a .fa inside /home/freddie/ref_fa/. Ex.: /home/freddie/ref_fa/hg38.fa
 
-`<events-file> is a .bed inside /home/freddie/events/. Ex.: /home/freddie/events/events.bed`
+<events-file> is a .bed inside /home/freddie/events/. Ex.: /home/freddie/events/events.bed
 
 ### Coding
 The “coding” command classifies the novel transcripts identified in the “chimeric” step as coding or non coding. Here, FREDDIE uses a model trained by RNASamba (available at: www.bioinfo.mochsl.org.br/freddiesdata/model.hdf5) to calculate the probability of a transcript being coding. In the end, a FASTA file with the protein sequences of all transcripts considered coding by our criteria is created.
@@ -246,15 +246,15 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <rnasambamodel-file-path>:/home/freddie/rnasamba/ -v <proteinseq-file-path>:/home/freddie/proteinseq/ -v <output-path>:/home/freddie/output/ freddie coding -o test -m /home/freddie/rnasamba/<rnasambamodel-file> -d /home/freddie/proteinseq/<proteinseq-file>`
 
 Whereas:
-`<rnasambamodel-file-path> is the directory where rnasamba model was downloaded. Ex.: if $PWD/model.hdf5 type $PWD/`
+<rnasambamodel-file-path> is the directory where rnasamba model was downloaded. Ex.: if $PWD/model.hdf5 type $PWD/
 
-`<proteinseq-file-path> is the directory where the proteinseq was downloaded. Ex.: if $PWD/hg38.pep.fa type $PWD/`
+<proteinseq-file-path> is the directory where the proteinseq was downloaded. Ex.: if $PWD/hg38.pep.fa type $PWD/
 
-`<output-path> is the output directory. Ex.: $PWD/output/`
+<output-path> is the output directory. Ex.: $PWD/output/
 
-`<rnasambamodel-file> is a .hdf5 inside /home/freddie/rnasamba/. Ex.: /home/freddie/rnasamba/model.hdf5`
+<rnasambamodel-file> is a .hdf5 inside /home/freddie/rnasamba/. Ex.: /home/freddie/rnasamba/model.hdf5
 
-`<proteinseq-file> is a .fa inside /home/freddie/proteinseq/. Ex.: /home/freddie/proteinseq/hg38.pep.fa`
+<proteinseq-file> is a .fa inside /home/freddie/proteinseq/. Ex.: /home/freddie/proteinseq/hg38.pep.fa
 
 ### Pfam
 The “pfam” step searches for protein domains in the novel transcripts that passed the user’s predefined coding probability and subsequently compares them with the host’s protein domains. In order to identify the protein domains, we used HMMER trained with the PFAM database. The output of this command is a TSV file comparing the protein domains of the novel transcripts identified with those of the host genes.
@@ -274,11 +274,11 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/freddie/pfammodel/ -v <output-path>:/home/freddie/output/ freddie pfam -o test -M <pfammodel-file>`
 
 Whereas:
-`<pfammodel-file-path> is the directory where pfam model was downloaded. Ex.: if $PWD/Pfam-A.hmm type $PWD/`
+<pfammodel-file-path> is the directory where pfam model was downloaded. Ex.: if $PWD/Pfam-A.hmm type $PWD/
 
-`<output-path> is the output directory. Ex.: $PWD/output/`
+<output-path> is the output directory. Ex.: $PWD/output/
 
-`<pfammodel-file> is a .hmm inside /home/freddie/pfammodel/. Ex.: /home/freddie/pfammodel/Pfam-A.hmm`
+<pfammodel-file> is a .hmm inside /home/freddie/pfammodel/. Ex.: /home/freddie/pfammodel/Pfam-A.hmm
 
 ### Expression
 The “expression” command quantifies all the transcriptomes assembled by the StringTie2 “expression” function. The expression results, in TPM (transcript per million) per transcript per sample, are made available as a TSV file.
@@ -299,7 +299,7 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie expression -o test`
 
 Whereas:
-`<output-path> is the output directory. Ex.: $PWD/output/`
+<output-path> is the output directory. Ex.: $PWD/output/
 
 ### Results
 Finally, the “results” command compiles all relevant information from the previous steps. In addition, if the novel transcripts contribute to the expression of their host genes, this step further generates boxplots to show the relative contribution of such expression patterns.
@@ -316,7 +316,7 @@ Short options | Long options | Description
 `docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie results -o test`
 
 Whereas:
-`<output-path> is the output directory. Ex.: $PWD/output/`
+<output-path> is the output directory. Ex.: $PWD/output/
 
 <!-- LICENSE -->
 ## License
