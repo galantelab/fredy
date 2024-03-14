@@ -156,8 +156,11 @@ Short options | Long options | Description
 Whereas:
 
 `<star_index-path> is the directory where star_index was downloaded. Ex.: $PWD/star_index/`
+
 `<fastq-file-path> is the directory where all fastq files are. Ex.: if $PWD/*fastq.gz type $PWD/`
+
 `<output-path> is the output directory. Ex.: $PWD/output/`
+
 `<fastq-path> is a .txt file inside /home/freddie/input/ with the docker path (somethig like /home/freddie/input/test.fastq.gz) to the fastq files.`
 
 ### string  
@@ -182,7 +185,9 @@ Short options | Long options | Description
 Whereas:
 
 `<gtf-file-path> is the directory where gtf was downloaded. Ex.: if $PWD/gencodev36.annotation.gtf type $PWD/`
+
 `<output-path> is the output directory. Ex.: $PWD/output/`
+
 `<gtf-file> is a gtf inside /home/freddie/gtf/. Ex.: /home/freddie/gtf/gencodev36.annotation.gtf`
 
 ### Chimeric
@@ -211,11 +216,17 @@ Short options | Long options | Description
 
 Whereas:
 `<gtf-file-path> is the directory where gtf was downloaded. Ex.: if $PWD/gencodev36.annotation.gtf type $PWD/`
+
 `<genome-file-path> is the directory where the reference genome and reference genome index were downloaded. Ex.: if $PWD/hg38.fa type $PWD/`
+
 `<events-file-path> is the directory where the events are. Ex.: if $PWD/events.bed type $PWD/`
+
 `<output-path> is the output directory. Ex.: $PWD/output/`
+
 `<gtf-file> is a gtf inside /home/freddie/gtf/. Ex.: /home/freddie/gtf/gencodev36.annotation.gtf`
+
 `<genome-file> is a .fa inside /home/freddie/ref_fa/. Ex.: /home/freddie/ref_fa/hg38.fa`
+
 `<events-file> is a .bed inside /home/freddie/events/. Ex.: /home/freddie/events/events.bed`
 
 ### Coding
@@ -236,9 +247,13 @@ Short options | Long options | Description
 
 Whereas:
 `<rnasambamodel-file-path> is the directory where rnasamba model was downloaded. Ex.: if $PWD/model.hdf5 type $PWD/`
+
 `<proteinseq-file-path> is the directory where the proteinseq was downloaded. Ex.: if $PWD/hg38.pep.fa type $PWD/`
+
 `<output-path> is the output directory. Ex.: $PWD/output/`
+
 `<rnasambamodel-file> is a .hdf5 inside /home/freddie/rnasamba/. Ex.: /home/freddie/rnasamba/model.hdf5`
+
 `<proteinseq-file> is a .fa inside /home/freddie/proteinseq/. Ex.: /home/freddie/proteinseq/hg38.pep.fa`
 
 ### Pfam
@@ -260,7 +275,9 @@ Short options | Long options | Description
 
 Whereas:
 `<pfammodel-file-path> is the directory where pfam model was downloaded. Ex.: if $PWD/Pfam-A.hmm type $PWD/`
+
 `<output-path> is the output directory. Ex.: $PWD/output/`
+
 `<pfammodel-file> is a .hmm inside /home/freddie/pfammodel/. Ex.: /home/freddie/pfammodel/Pfam-A.hmm`
 
 ### Expression
