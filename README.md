@@ -19,13 +19,13 @@
 <br />
 <p align="center">
   <a href="https://github.com/rmercuri/freddie">
-    <img src="assets/img/freddie.jpg" alt="Logo" width="80" height="80">
+    <img src="assets/img/Logo.png" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">Freddie</h3>
 
   <p align="center">
-    Pipeline to identify and quantify chimeric transcripts from coding genes and domain changes
+    A tool to identify exonization of retrotransposable elements using RNA-seq data. 
     <br />
     <a href="https://github.com/rmercuri/freddie"><strong>Explore the docs »</strong></a>
     <br />
@@ -49,6 +49,7 @@
       <a href="#installation">Installation</a>
       <ul>
         <li><a href="#installation">Installation</a></li>
+        <li><a href="#databases">Databases</a></li>
       </ul>
     </li>
     <li><a href="#commands-and-options">Commands and options</a></li>
@@ -74,24 +75,42 @@
 Freddie is a user-friendly pipeline designed to identify, quantify, and analyze chimeric transcripts from RNA-Seq data. The pipeline utilizes well-established tools such as StringTie2 for transcriptome assembly and quantification. In addition, machine learning algorithms provided by RNASamba are used to predict whether a transcript is coding. To further enhance the analysis, Freddie also incorporates HMMER and Python3 scripts to compare protein domains and identify potential alterations. With these tools, Freddie provides a comprehensive approach to chimeric transcript analysis that is both efficient and effective.
 
 <a href="https://github.com/rmercuri/freddie">
-    <img src="assets/img/Workflow.jpg" alt="Workflow" width="1800" height="500">
+    <img src="assets/img/Workflow.png" alt="Workflow" width="1800" height="500">
 </a>
 
 <!-- INSTALLATION -->
-## Installation
-Freddie can be obtained from Dockerfile.
+### Installation
+The source code for FREDDIE can be obtained in our github page using this command line:
 
 `git clone https://github.com/galantelab/freddie.git`
+
+Inside FREDDIE’s directory, build a docker image:
 
 `cd freddie`
 
 `docker build -f Dockerfile -t freddie .`
 
-`alias freddie='docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <reference-files-path>:/home/ref/ -v <input-path>:/home/input/ -v <output-path>:/home/output/ -v <output-tostring-path>:/home/output_str freddie'`
+### Databases
+We provide all the necessary databases to run FREDDIE, catering to human functionality. In our comprehensive documentation available in paper supplementary material, we offer a step-by-step guide to generating these exact files for other species.
+
+
+File | Description | Link
+------------ | ------------- | -------------
+star_index | Folder with STAR Index builded with hg38.fa and gencodev36 | www.bioinfo.mochsl.org.br/freddiesdata/STAR_index/
+gencode.v36.annotation.gtf | GTF file (Used in TCGA) | www.bioinfo.mochsl.org.br/freddiesdata/gencode.v36.annotation.gtf
+hg38.fa | Reference Genome | www.bioinfo.mochsl.org.br/freddiesdata/hg38.fa
+hg38.fa.fai | Index of reference genome | www.bioinfo.mochsl.org.br/freddiesdata/hg38.fa.fai
+hg38.pep.fa | Aminoacid sequences of proteins | www.bioinfo.mochsl.org.br/freddiesdata/hg38.pep.fa
+model.hdf5 | RNASamba model (Works to mammals in general) | www.bioinfo.mochsl.org.br/freddiesdata/model.hdf5
+Pfam-A.hmm | HMMER model (Works to mammals in general) you need download all files with .hmm* | www.bioinfo.mochsl.org.br/freddiesdata/Pfam-A.hmm
+Pfam-A.hmm.h3f | HMMER model (Works to mammals in general) you need download all files with .hmm* | www.bioinfo.mochsl.org.br/freddiesdata/Pfam-A.hmm.h3f
+Pfam-A.hmm.h3i | HMMER model (Works to mammals in general) you need download all files with .hmm* | www.bioinfo.mochsl.org.br/freddiesdata/Pfam-A.hmm.h3i
+Pfam-A.hmm.h3m | HMMER model (Works to mammals in general) you need download all files with .hmm* | www.bioinfo.mochsl.org.br/freddiesdata/Pfam-A.hmm.h3m
+Pfam-A.hmm.h3p | HMMER model (Works to mammals in general) you need download all files with .hmm* | www.bioinfo.mochsl.org.br/freddiesdata/Pfam-A.hmm.h3p
 
 <!-- COMMANDS AND OPTIONS -->
 ## Commands and options
-Freddie works with a command and subcommands structure:
+FREDDIE has seven subcommands: “star”, “string”, “chimeric”, “coding”, “pfam”, “expression” and “results”.
 
 `freddie [subcommand] <options>`
 
@@ -99,139 +118,187 @@ Subcommands may be invoked by the help menu:
 
 `freddie help`
 
-6 subcommands are avaiable:
+7 subcommands are avaiable:
 
 Subcommand | Description
 ------------ | -------------
-string | Run StringTie2 to all the samples
-chimeric | Finding potential chimeric transcripts
-coding | Estimates possibility of a chimeric transcript being coding
-pfam | Analyzes the domains of the sequences generated in relation to the host transcript
-expression | Measurement of transcript expression
-results | Compile results from the previous step
+star | Align RNA-seq data against the genome using STAR (DOI: 10.1093/bioinformatics/bts635)
+string | Assemble sequenced reads (compatible with both short and long reads) using StringTie2 (DOI: 10.1186/s13059-019-1910-1)
+chimeric | Identify potential chimeric transcripts
+coding | Compute the coding potential of (chimeric) transcripts using RNASamba (DOI: https://doi.org/10.1093/nargab/lqz024)
+pfam | Search for protein domains using HMMer (DOI: 10.1093/nar/gkr367) and Pfam protein families and domains (https://doi.org/10.1093/nar/gkaa913)
+expression | Estimate transcript expression using StringTie2 (DOI: 10.1186/s13059-019-1910-1)
+results | Compile the final results of chimeric transcripts incorporating inputs from previous steps
 
 <!-- RUNNING -->
-## Running
-To run the pipeline you will need STAR-aligned bam (or longSTAR for long reads) and filtered for q255 reads and their fastq. To execute this filter in the bam file you must use this command:
+## star
+The first step in the FREDDIE’s pipeline is the “star”. The inputs to this command are FASTQ files and a STAR index (pre-made available at: www.bioinfo.mochsl.org.br/freddiesdata/STAR_index/). The sorted and filtered BAM  aligned file resulting from this command will become the input to the next step. This command supports all types of RNA-Seq data (paired-end, single-end and long-reads), either compressed (.gz) or not.
 
-`samtools view -h -b -q 255 <bam-file> -o <output-name>`
+star options are:
 
-### String  
-The transcriptome of your project or sample can be assembled using the StringTie 2 tool (Kovaka et al., 2019) through the use of a specific subcommand. During this process, the tool will independently process each bam file, creating individual gtfs for each one. These gtfs will be stored in the output_str/ directory. Following this, the generated gtfs will be merged into a single annotation file that will be located in the output/ directory and named $project.merge.gtf. This final annotation file will contain the comprehensive transcriptome assembly for your project or sample.
-
-It is recommended for this step 8 threads.
+Short options | Long options | Description
+------------ | ------------- | -------------
+-o | --output-dir | Output directory. Creates the directory if it does not exist
+-i | --index-dir | STAR index directory
+-f | --file | File containing a newline separated list of sequencing files in FASTQ format. This option is not mandatory if one or more FASTQ files are passed as argument.
+-h | --help | Print help message
+-t | --threads | Number of threads [default: 8]
+-S | --short-reads | Set the sequencing to short reads [default]
+-L | --long-reads | Set the sequencing to long reads
+-s | --single-end | For short reads '-S', set the type of sequencing to single-end
+-p | --paired-end | For short reads '-S', set the type of sequencing to paired-end. In this case, the FASTQ files will be processed, being considered forward (R1) and reverse complement (R2) according to the order in which they are passed [default]
 
 **Example**
 
-`freddie string -p test -f /home/input/<bam-files.txt> -t 8 -e long -g /home/ref/<gtf-path>`
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <star_index-path>:/home/freddie/star_index/ -v <fastq-path>:/home/freddie/input/ -v <output-path>:/home/freddie/output/ freddie star -o test -i /home/freddie/star_index/ -f /home/freddie/input/<fastq-path>`
+
+Whereas:
+
+`<star_index-path> is the directory where star_index was downloaded. Ex.: $PWD/star_index/`
+`<fastq-file-path> is the directory where all fastq files are. Ex.: if $PWD/*fastq.gz type $PWD/`
+`<output-path> is the output directory. Ex.: $PWD/output/`
+`<fastq-path> is a .txt file inside /home/freddie/input/ with the docker path (somethig like /home/freddie/input/test.fastq.gz) to the fastq files.`
+
+### string  
+The next step in the pipeline is “string”. This command performs a transcriptome assembly with the BAMs generated in the previous step (or custom BAMs provided by the user). The output of this analysis is a GTF file representing the transcriptome from all samples.
 
 String options are:
 
-Options | Description
------------- | -------------
--p | Project name
--f | List of bam files in input path
--t | Threads
--e | Type of reads (short or long)
--g | Path to the reference transcriptome
+Short options | Long options | Description
+------------ | ------------- | -------------
+-o | --output-dir | Output directory. Creates the directory if it does not exist
+-a | --annotation | Gene annotation of the reference genome transcriptome in GTF format
+-f | --file | File containing a newline separated list of sequencing files in FASTQ format. This option is not mandatory if one or more FASTQ files are passed as argument.
+-h | --help | Print help message
+-t | --threads | Number of threads [default: 8]
+-S | --short-reads | Set the sequencing to short reads [default]
+-L | --long-reads | Set the sequencing to long reads
+
+**Example**
+
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <output-path>:/home/freddie/output/ freddie string -o test -a /home/freddie/gtf/<gtf-file>`
+
+Whereas:
+
+`<gtf-file-path> is the directory where gtf was downloaded. Ex.: if $PWD/gencodev36.annotation.gtf type $PWD/`
+`<output-path> is the output directory. Ex.: $PWD/output/`
+`<gtf-file> is a gtf inside /home/freddie/gtf/. Ex.: /home/freddie/gtf/gencodev36.annotation.gtf`
 
 ### Chimeric
-Within the "chimeric" subcommand, Freddie conducts a search for events that have not been previously annotated in the reference transcriptome and possess a 50% overlap with the desired event position. This can include events such as Mobile Elements or Retrocopies. Additionally, Freddie also searches for events that possess a 50% overlap with both the event and the exon. Following the identification of these novel transcripts, they are compared to the annotated transcripts within the same region. This allows Freddie to determine which transcript is the most similar and in which region of the novel transcript the event was found. Specifically, the location of the event within the novel transcript is identified as either initial, internal, or final, depending on its position within the transcript. This thorough approach allows for the comprehensive analysis of chimeric events and enhances the accuracy of the results.
+In the “chimeric” step, the pipeline identifies novel transcripts based on the GTF file generated from the “string” command. Here, FREDDIE uses a list of events provided by the user to find transcripts with overlap between exons and the given events. Again, a GTF file and also a FASTA file with all transcripts found are the outputs provided.
 
 <a href="https://github.com/rmercuri/freddie">
     <img src="assets/img/scheme_quimeric.jpg" alt="Chimeric transcript" width="1800" height="500">
 </a>
 
-The output of this subcommand are divided by 3 files:
-
-- A gtf with the positions of the new transcripts;
-
-- A tsv with the information to insert the events in the transcripts;
-
-- A fasta file with the sequences of the new transcripts.
-  
-**Example**
-
-`freddie chimeric -p test -i /home/input/<events-file> -g /home/ref/<gtf-path> -G /home/ref/<genome-path> -y default`
-
 Chimeric options are:
 
-Options | Description
------------- | -------------
--p | Project name
--i | Events input BED4 file
--g | Path to the reference transcriptome
--G | Path to the reference genome
--y | Filter to considered and chimeric event (default [50% overlap of the event in the exon] or strict [50% overlap of the event in the exon and in the exon in the event])
+Short options | Long options | Description
+------------ | ------------- | -------------
+-o | --output-dir | Output directory. Creates the directory if it does not exist
+-a | --annotation | Gene annotation of the reference genome transcriptome in GTF format
+-g | --genome | FASTA file of the reference genome,which is the same file used for reads alignment using STAR
+-e | --stringtie-out | StringTie2 output events file in BED4
+-h | --help | Print help message
+-T | --tmp-dir | Uses directory for temporaries [default: /tmp]
+-r | --reciprocal | Criteria for identifying chimeric events is 50% overlap of the event with the exon and 50% overlap of the exon with the event
+-R | --irreciprocal | Criteria for identifying chimeric events is 50% overlap of the event with the exon [default]
+
+**Example**
+
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <genome-file-path>:/home/freddie/ref_fa/ -v <events-file-path>:/home/freddie/events/ -v <output-path>:/home/freddie/output/ freddie chimeric -o test -g /home/freddie/gtf/<gtf-file> -G /home/freddie/ref_fa/<genome-file> -i /home/freddie/events/<event-file>`
+
+Whereas:
+`<gtf-file-path> is the directory where gtf was downloaded. Ex.: if $PWD/gencodev36.annotation.gtf type $PWD/`
+`<genome-file-path> is the directory where the reference genome and reference genome index were downloaded. Ex.: if $PWD/hg38.fa type $PWD/`
+`<events-file-path> is the directory where the events are. Ex.: if $PWD/events.bed type $PWD/`
+`<output-path> is the output directory. Ex.: $PWD/output/`
+`<gtf-file> is a gtf inside /home/freddie/gtf/. Ex.: /home/freddie/gtf/gencodev36.annotation.gtf`
+`<genome-file> is a .fa inside /home/freddie/ref_fa/. Ex.: /home/freddie/ref_fa/hg38.fa`
+`<events-file> is a .bed inside /home/freddie/events/. Ex.: /home/freddie/events/events.bed`
 
 ### Coding
-Freddie finds the new transcripts that can be encoded through the coding subcommand. The RNASamba tool is utilized to employ machine learning algorithms in order to calculate the probability of each transcript being translated into protein. In this module, we only consider transcripts with a probability of 90% or higher as potentially protein-coding.
-
-The output file is a fasta file with amino acid sequence of potentially coding transcripts.
+The “coding” command classifies the novel transcripts identified in the “chimeric” step as coding or non coding. Here, FREDDIE uses a model trained by RNASamba (available at: www.bioinfo.mochsl.org.br/freddiesdata/model.hdf5) to calculate the probability of a transcript being coding. In the end, a FASTA file with the protein sequences of all transcripts considered coding by our criteria is created.
   
+Coding options are:
+Short options | Long options | Description
+------------ | ------------- | -------------
+-o | --output-dir | Output directory. Creates the directory if it does not exist
+-m | --protein-model | File with the model of RNASamba
+-d | --protein-db | File with the protein sequences
+-h | --help | Print help message
+-P | --probability | Set the cutoff for selecting transcripts considered to be protein-coding, based on the probability provided by RNASamba [default: 0.9]
+
 **Example**
 
-`freddie coding -p test -m /home/ref/<rnasambamodel> -d /home/ref/<proteinseq-file>`
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <rnasambamodel-file-path>:/home/freddie/rnasamba/ -v <proteinseq-file-path>:/home/freddie/proteinseq/ -v <output-path>:/home/freddie/output/ freddie coding -o test -m /home/freddie/rnasamba/<rnasambamodel-file> -d /home/freddie/proteinseq/<proteinseq-file>`
 
-Coding options are:
-
-Options | Description
------------- | -------------
--p | Project name
--m | File name of the model of RNASamba
--d | Path to the protein sequences
+Whereas:
+`<rnasambamodel-file-path> is the directory where rnasamba model was downloaded. Ex.: if $PWD/model.hdf5 type $PWD/`
+`<proteinseq-file-path> is the directory where the proteinseq was downloaded. Ex.: if $PWD/hg38.pep.fa type $PWD/`
+`<output-path> is the output directory. Ex.: $PWD/output/`
+`<rnasambamodel-file> is a .hdf5 inside /home/freddie/rnasamba/. Ex.: /home/freddie/rnasamba/model.hdf5`
+`<proteinseq-file> is a .fa inside /home/freddie/proteinseq/. Ex.: /home/freddie/proteinseq/hg38.pep.fa`
 
 ### Pfam
-To compare the protein domains of chimeric transcripts and their closest counterparts in the host gene, Freddie employs the coding subcommand. Using the HMmer tool along with individual Python scripts, the domains of both transcripts can be characterized and compared. The domains can be classified as lost (either partially or entirely), gained, or maintained between the two transcripts.
+The “pfam” step searches for protein domains in the novel transcripts that passed the user’s predefined coding probability and subsequently compares them with the host’s protein domains. In order to identify the protein domains, we used HMMER trained with the PFAM database. The output of this command is a TSV file comparing the protein domains of the novel transcripts identified with those of the host genes.
   
-The output file is a tsv file with all domain alterations founded (if it happened) between your set of transcript chimeric amino acid sequence and the host transcript amino acid sequence
-  
+Pfam options are:
+Short options | Long options | Description
+------------ | ------------- | -------------
+-o | --output-dir | Output directory. Creates the directory if it does not exist
+-M | --pfam-model | A database of protein domain families to be used as an index for HMmer tool
+-h | --help | Print help message
+-T | --tmp-dir | Uses directory for temporaries [default: /tmp]
+-t | --threads | Number of threads [default: 4]
+-E | --e-value | In the HMMER per-target output, reports target sequences with an e-value lesser than NUM [default: 1e-6]
+
 **Example**
   
-`freddie pfam -p test`
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/freddie/pfammodel/ -v <output-path>:/home/freddie/output/ freddie pfam -o test -M <pfammodel-file>`
 
-Pfam options are:
-
-Options | Description
------------- | -------------
--p | Project name
+Whereas:
+`<pfammodel-file-path> is the directory where pfam model was downloaded. Ex.: if $PWD/Pfam-A.hmm type $PWD/`
+`<output-path> is the output directory. Ex.: $PWD/output/`
+`<pfammodel-file> is a .hmm inside /home/freddie/pfammodel/. Ex.: /home/freddie/pfammodel/Pfam-A.hmm`
 
 ### Expression
-The expression of the chimeric transcripts in the samples is done by StringTie2. In this step, we use the gtf generated by Strigtie as the reference transcriptome. It is one of the most time consuming steps depending on the amount of sample.
-
-The output file is a tsv file which contains a total expression of all the transcripts in all samples. (output/$project_name/expression.tsv)
-  
-**Example**
- 
-`freddie expression -p test -f /home/input/<bam-files.txt> -t 12 -e short`
+The “expression” command quantifies all the transcriptomes assembled by the StringTie2 “expression” function. The expression results, in TPM (transcript per million) per transcript per sample, are made available as a TSV file.
 
 Expression options are:
+Short options | Long options | Description
+------------ | ------------- | -------------
+-o | --output-dir | Output directory. Creates the directory if it does not exist
+-f | --file | File containing a newline separated list of sequencing files in FASTQ format. This option is not mandatory if one or more FASTQ files are passed as argument.
+-h | --help | Print help message
+-T | --tmp-dir | Uses directory for temporaries [default: /tmp]
+-t | --threads | Number of threads [default: 8]
+-S | --short-reads | Set the sequencing to short reads [default]
+-L | --long-reads | Set the sequencing to long reads
 
-Options | Description
------------- | -------------
--p | Project name
--f | List of bam files in input path
--t | Threads
--e | Type of reads (short or long)
+**Example**
+ 
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie expression -o test`
+
+Whereas:
+`<output-path> is the output directory. Ex.: $PWD/output/`
 
 ### Results
-Use the results subcommand to summarize all the information found in the previous processes and generate graphs that compare the expression of your group of chimeric transcripts against the expression of the host gene transcript (these graphs are only generated if the chimeric transcript represents more than 15% of the total expression of the host gene).
+Finally, the “results” command compiles all relevant information from the previous steps. In addition, if the novel transcripts contribute to the expression of their host genes, this step further generates boxplots to show the relative contribution of such expression patterns.
 
-The output of this subcommand are divided by 2 files:
-
-- A tsv file with summarize all the information about your set of chimeric transcripts;
-  
-- A boxplot of chimeric transcript represents more than 15% of the total expression of the host gene.
+Results options are:
+Short options | Long options | Description
+------------ | ------------- | -------------
+-o | --output-dir | Output directory. Creates the directory if it does not exist
+-h | --help | Print help message
+-T | --tmp-dir | Uses directory for temporaries [default: /tmp]
 
 **Example**
   
-`freddie results -p test`
+`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie results -o test`
 
-Results options are:
-
-Options | Description
------------- | -------------
--p | Project name
+Whereas:
+`<output-path> is the output directory. Ex.: $PWD/output/`
 
 <!-- LICENSE -->
 ## License
@@ -241,12 +308,15 @@ Options | Description
 
 Rafael Luiz Vieira Mercuri - (rmercuri@mochsl.org.br)
 
-Project Link: [https://github.com/rmercuri/freddie](https://github.com/rmercuri/freddie)
+Project Link: [https://github.com/galantelab/freddie](https://github.com/galantelab/freddie)
 
 <!-- AUTHORS -->
 ## Authors
 Rafael Luiz Vieira Mercuri
-
+Thiago Luiz Araújo Miller
+Filipe Ferreira dos Santos
+Matheus de Lima
+Aline Rangel-Pozzo
 Pedro Alexandre Favoretto Galante
 
 <!-- MARKDOWN LINKS & IMAGES -->
