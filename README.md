@@ -56,6 +56,7 @@
     <li>
       <a href="#running">Running</a>
       <ul>
+        <li><a href="#star">Star</a></li>
         <li><a href="#string">StringTie</a></li>
         <li><a href="#chimeric">Chimeric</a></li>
         <li><a href="#coding">Coding</a></li>
