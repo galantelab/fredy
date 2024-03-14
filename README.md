@@ -331,10 +331,15 @@ Project Link: [https://github.com/galantelab/freddie](https://github.com/galante
 <!-- AUTHORS -->
 ## Authors
 Rafael Luiz Vieira Mercuri
+
 Thiago Luiz Araújo Miller
+
 Filipe Ferreira dos Santos
+
 Matheus de Lima
+
 Aline Rangel-Pozzo
+
 Pedro Alexandre Favoretto Galante
 
 <!-- MARKDOWN LINKS & IMAGES -->
