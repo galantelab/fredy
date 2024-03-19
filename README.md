@@ -109,7 +109,7 @@ Pfam-A.hmm.h3i | HMMER model (Works to mammals in general) you need download all
 Pfam-A.hmm.h3m | HMMER model (Works to mammals in general) you need download all files with .hmm* | https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3m
 Pfam-A.hmm.h3p | HMMER model (Works to mammals in general) you need download all files with .hmm* | https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3p
 
-to `star_index.tar.gz` you shoul uncompress the folder:
+To use `star_index.tar.gz` you should uncompress the folder:
 
 `tar -xvf filename.tar.gz` 
 
