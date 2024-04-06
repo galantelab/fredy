@@ -75,7 +75,8 @@
 ### Installation
 The source code for FREDDIE can be obtained in our github page using the following command:
 
-`git clone https://github.com/galantelab/freddie.git`
+##
+<tab><tab>git clone https://github.com/galantelab/freddie.git
 
 Inside FREDDIE’s directory, build a docker image:
 
