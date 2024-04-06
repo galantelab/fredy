@@ -64,7 +64,7 @@
 </details>
 
 <!-- OVERVIEW -->
-## Overview
+### Overview
 <p align="justify"> Freddie is a user-friendly pipeline designed to identify, quantify, and analyze chimeric transcripts from RNA-Seq data. The pipeline utilizes well-established tools such as StringTie2 for transcriptome assembly and quantification. In addition, machine learning algorithms provided by RNASamba are used to predict whether a transcript is coding. To further enhance the analysis, Freddie also incorporates HMMER and Python3 scripts to compare protein domains and identify potential alterations. With these tools, Freddie provides a comprehensive approach to chimeric transcript analysis that is both efficient and effective. </p>
 
 <a href="https://github.com/rmercuri/freddie">
@@ -75,8 +75,9 @@
 ### Installation
 The source code for FREDDIE can be obtained in our github page using the following command:
 
-#
-<tab><tab>git clone https://github.com/galantelab/freddie.git
+```bash
+git clone https://github.com/galantelab/freddie.git
+```
 
 Inside FREDDIE’s directory, build a docker image:
 
