@@ -81,9 +81,10 @@ git clone https://github.com/galantelab/freddie.git
 
 Inside FREDDIE’s directory, build a docker image:
 
-`cd freddie`
-
-`sudo docker build -f Dockerfile -t freddie .`
+```bash
+cd freddie
+sudo docker build -f Dockerfile -t freddie .
+```
 
 ### Databases
 We provide all the necessary databases to run FREDDIE, catering to human functionality. In our comprehensive documentation available in the supplementary material, we offer a step-by-step guide to generating these exact files for other species.
@@ -105,7 +106,10 @@ File | Description
 
 To use `star_index.tar.gz` you should uncompress the folder:
 
-`tar -xvf filename.tar.gz` 
+
+```bash
+tar -xvf filename.tar.gz
+```
 
 <!-- USAGE -->
 ## Usage
@@ -115,7 +119,9 @@ FREDDIE has seven subcommands: “star”, “string”, “chimeric”, “codi
 
 Subcommands may be invoked by the help menu:
 
-`freddie help`
+```bash
+freddie help
+```
 
 Subcommand | Description
 ------------ | -------------
@@ -148,7 +154,9 @@ Short | Long | Description
 
 **Example**
 
-`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <star_index-path>:/home/freddie/star_index/ -v <fastq-path>:/home/freddie/input/ -v <output-path>:/home/freddie/output/ freddie star -o test -i /home/freddie/star_index/ -f /home/freddie/input/<fastq-path>`
+```bash
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <star_index-path>:/home/freddie/star_index/ -v <fastq-path>:/home/freddie/input/ -v <output-path>:/home/freddie/output/ freddie star -o test -i /home/freddie/star_index/ -f /home/freddie/input/<fastq-path>
+```
 
 Where:
 
@@ -177,7 +185,9 @@ Short | Long | Description
 
 **Example**
 
-`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <output-path>:/home/freddie/output/ freddie string -o test -a /home/freddie/gtf/<gtf-file>`
+```bash
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <output-path>:/home/freddie/output/ freddie string -o test -a /home/freddie/gtf/<gtf-file>`
+```
 
 Where:
 
@@ -194,6 +204,7 @@ In the “chimeric” step, the pipeline identifies novel transcripts based on t
     <img src="assets/img/scheme_quimeric.jpg" alt="Chimeric transcript" width="1800" height="500">
 </a>
 
+
 OPTIONS:
 
 Short | Long | Description
@@ -209,7 +220,9 @@ Short | Long | Description
 
 **Example**
 
-`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <genome-file-path>:/home/freddie/ref_fa/ -v <events-file-path>:/home/freddie/events/ -v <output-path>:/home/freddie/output/ freddie chimeric -o test -g /home/freddie/gtf/<gtf-file> -G /home/freddie/ref_fa/<genome-file> -i /home/freddie/events/<event-file>`
+```bash
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <genome-file-path>:/home/freddie/ref_fa/ -v <events-file-path>:/home/freddie/events/ -v <output-path>:/home/freddie/output/ freddie chimeric -o test -g /home/freddie/gtf/<gtf-file> -G /home/freddie/ref_fa/<genome-file> -i /home/freddie/events/<event-file>
+```
 
 Where:
 
@@ -242,7 +255,9 @@ Short | Long | Description
 
 **Example**
 
-`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <rnasambamodel-file-path>:/home/freddie/rnasamba/ -v <proteinseq-file-path>:/home/freddie/proteinseq/ -v <output-path>:/home/freddie/output/ freddie coding -o test -m /home/freddie/rnasamba/<rnasambamodel-file> -d /home/freddie/proteinseq/<proteinseq-file>`
+```bash
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <rnasambamodel-file-path>:/home/freddie/rnasamba/ -v <proteinseq-file-path>:/home/freddie/proteinseq/ -v <output-path>:/home/freddie/output/ freddie coding -o test -m /home/freddie/rnasamba/<rnasambamodel-file> -d /home/freddie/proteinseq/<proteinseq-file>
+```
 
 Where:
 
@@ -272,7 +287,9 @@ Short | Long | Description
 
 **Example**
   
-`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/freddie/pfammodel/ -v <output-path>:/home/freddie/output/ freddie pfam -o test -M <pfammodel-file>`
+```bash
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/freddie/pfammodel/ -v <output-path>:/home/freddie/output/ freddie pfam -o test -M <pfammodel-file>
+```
 
 Where:
 
@@ -299,7 +316,9 @@ Short | Long | Description
 
 **Example**
  
-`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie expression -o test`
+```bash
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie expression -o test
+```
 
 Where:
 
@@ -318,7 +337,9 @@ Short | Long | Description
 
 **Example**
   
-`docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie results -o test`
+```bash
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie results -o test
+```
 
 Where:
 
