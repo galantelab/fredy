@@ -346,7 +346,7 @@ Where:
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
-<!-- PRATICAL WORKFLOW -->
+<!-- PRATICAL -->
 ## Pratical workflow
 In order to execute FREDDIE, we selected RNA-seq paired-end data of 2 samples related to the cell line K562 from the <a href="https://www.encodeproject.org/">ENCODE Project</a>.
 
