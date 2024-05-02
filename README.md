@@ -58,7 +58,7 @@
         <li><a href="#results">Results</a></li>
       </ul>
     </li>
-    <li><a href="#practical">Practical Workflow</a></li>
+    <li><a href="#practical-workflow">Practical Workflow</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#authors">Authors</a></li>
   </ol>
