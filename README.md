@@ -45,7 +45,7 @@
         <li><a href="#databases">Databases</a></li>
       </ul>
     </li>
-    <li><a href="#Usage">Usage</a></li>
+    <li><a href="#usage">Usage</a></li>
     <li>
       <a href="#commands-and-options">Commands and options</a>
       <ul>
@@ -58,6 +58,7 @@
         <li><a href="#results">Results</a></li>
       </ul>
     </li>
+    <li><a href="#pratical">Practical Workflow</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#authors">Authors</a></li>
   </ol>
@@ -108,7 +109,7 @@ To use `star_index.tar.gz` you should uncompress the folder:
 
 
 ```bash
-tar -xvf filename.tar.gz
+tar -xvf star_index.tar.gz
 ```
 
 <!-- USAGE -->
@@ -345,11 +346,134 @@ Where:
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
+<!-- PRATICAL WORKFLOW -->
+## Pratical workflow
+In order to execute FREDDIE, we selected RNA-seq paired-end data of 2 samples related to the cell line K562 from the <a href="https://www.encodeproject.org/">ENCODE Project</a>.
+
+First, you should download the data:
+
+```bash
+mkdir fastq
+
+cd fastq/
+
+##ENCLB063ZZZ R1
+wget https://www.encodeproject.org/files/ENCFF001RWF/@@download/ENCFF001RWF.fastq.gz
+mv ENCFF001RWF.fastq.gz ENCLB063ZZZ_R1.fastq.gz
+
+##ENCLB063ZZZ R2
+wget https://www.encodeproject.org/files/ENCFF001RWC/@@download/ENCFF001RWC.fastq.gz
+mv ENCFF001RWC.fastq.gz ENCLB063ZZZ_R2.fastq.gz
+
+##ENCLB059ZZZ R1
+wget https://www.encodeproject.org/files/ENCFF001RDE/@@download/ENCFF001RDE.fastq.gz
+mv ENCFF001RDE.fastq.gz ENCLB059ZZZ_R1.fastq.gz
+
+##ENCLB059ZZZ R2
+wget https://www.encodeproject.org/files/ENCFF001RCW/@@download/ENCFF001RCW.fastq.gz
+mv ENCFF001RCW.fastq.gz ENCLB059ZZZ_R2.fastq.gz
+
+cd ..
+```
+
+And download the databases of FREDDIE:
+
+```bash
+mkdir db
+cd db/
+
+## STAR Index (Based on Human hg38 - Gencode v36)
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/star_index.tar.gz
+tar -xvf star_index.tar.gz
+
+## Gencode v36 as the human annotation
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/gencode.v36.annotation.gtf
+
+## hg38 as the human reference genome
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hg38.fa
+
+## Aminoacid sequence
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hg38.pep.fa
+
+## RNASamba model
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/human38_model.hdf5
+
+## HMMer model
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3f
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3i
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3m
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3p
+
+## Retrocopies events
+wget https://bioinfohsl-tools.s3.amazonaws.com/rcpedia/downloads/beds/RCP_9606.bed
+cut -f 1,2,3,5 RCP_9606.bed > RCP_9606.bed4
+
+cd ..
+```
+
+Then, prepare a file with the FASTQ PATHs:
+
+```bash
+ls fastq/*fastq.gz | awk '{print "/home/freddie/"$1}' > files.txt
+```
+
+After that, install and build a docker image:
+
+```bash
+git clone https://github.com/galantelab/freddie.git
+cd freddie
+sudo docker build -f Dockerfile -t freddie .
+cd ..
+```
+
+Finally, you will be able to execute FREDDIE as follows:
+
+- “star” step:
+
+```bash
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie star -o /home/freddie/K562 -i /home/freddie/db/star_index -f /home/freddie/files.txt
+```
+
+- “string” step:
+
+```bash
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie string -o /home/freddie/K562 -a /home/freddie/db/gencode.v36.annotation.gtf
+```
+
+- “chimeric” step:
+
+```bash
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie chimeric -o /home/freddie/K562 -a /home/freddie/db/gencode.v36.annotation.gtf -g /home/freddie/db/hg38.fa -e /home/freddie/db/RCP_9606.bed4
+```
+
+- “pfam” step:
+
+```bash
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie pfam -o /home/freddie/K562 -M /home/freddie/db/Pfam-A.hmm
+```
+
+- “expression” step:
+
+```bash
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie expression -o /home/freddie/K562
+```
+
+- “results” step:
+
+```bash
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie results -o /home/freddie/K562
+```
+
+All information related to the chimeric transcripts identified by FREDDIE are available in the final output named “results.tsv”. If you wish to inspect these transcripts in a Genome Browser such as at <a href="https://genome.ucsc.edu/cgi-bin/hgGateway">UCSC</a> you can easily upload the “K562/chimeric/chimeric.gtf” file, also provided by the FREDDIE’s pipeline, to the “custom tracks”.
+
 <!-- CONTACT -->
 ## Contact
 
 Rafael Luiz Vieira Mercuri - (rmercuri@mochsl.org.br)
+
 Thiago Luiz Araújo Miller - (tmiller@mochsl.org.br)
+
 Pedro Alexandre Favoretto Galante - (pgalante@mochsl.org.br)
 
 Project Link: [https://github.com/galantelab/freddie](https://github.com/galantelab/freddie)
