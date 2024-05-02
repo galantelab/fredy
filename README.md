@@ -58,7 +58,7 @@
         <li><a href="#results">Results</a></li>
       </ul>
     </li>
-    <li><a href="#pratical">Practical Workflow</a></li>
+    <li><a href="#practical">Practical Workflow</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#authors">Authors</a></li>
   </ol>
@@ -346,8 +346,8 @@ Where:
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
-<!-- PRATICAL -->
-## Pratical workflow
+<!-- PRACTICAL -->
+## Practical workflow
 In order to execute FREDDIE, we selected RNA-seq paired-end data of 2 samples related to the cell line K562 from the <a href="https://www.encodeproject.org/">ENCODE Project</a>.
 
 First, you should download the data:
