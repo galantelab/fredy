@@ -227,7 +227,7 @@ awk -F "\t" '{if ($3 == "exon" && $1 ~/chr/) print $1"\t"$4"\t"$5"\t"$9}' \
 log_info 'Finding chimeric transcripts'
 
 log_info "Generate '$cod/chimeric.txt'"
-bedtools intersect $paramet -f 0.5 -wo \
+bedtools intersect $paramet -sorted -f 0.5 -wo \
 	-a "$input" \
 	-b "$tdir/novels_exon.bed" \
 	| cut -f 4,8 \
@@ -258,6 +258,7 @@ log_info "Generate '$tdir/exon.bed'"
 grep -w exon \
 	"$tdir/chimeric_dic.gtf" \
 	| cut -f 1,4,5,9 \
+	| sort -k1,1 -k2,2n \
 	> "$tdir/exon.bed"
 
 #Criando um bed com todos os transcritos ja anotados de protein_coding
@@ -268,7 +269,8 @@ awk '{if ($3 == "CDS") print $12}' "$gtf" \
 	| fgrep -wf - "$gtf" \
 	| awk '{if ($3 == "exon") print}' \
 	| cut -f 1,4,5,9 \
-	| bedtools intersect -wo -a "$tdir/exon.bed" -b - \
+	| sort -k1,1 -k2,2n \
+	| bedtools intersect -wo -sorted -a "$tdir/exon.bed" -b - \
 	| cut -f 4,8 \
 	| awk -F '"' '{print $4"\t"$8"\t"$10}' \
 	| sort \

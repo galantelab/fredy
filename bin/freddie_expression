@@ -278,7 +278,7 @@ merge_sample() {
 	awk -v OFS='\t' '
 		$3 == "transcript" {
 			gsub(/[;"]/,"");
-			if ($12 ~/ENST/)
+			if ($12 !~/MSTRG/ && $12 !~/unknow/)
 				print $10,$12,$20
 			else if ($12 ~/MSTRG/)
 				print $10,$12,$18
