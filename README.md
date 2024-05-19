@@ -407,7 +407,7 @@ wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3p
 
 ## Retrocopies events
 wget https://bioinfohsl-tools.s3.amazonaws.com/rcpedia/downloads/beds/RCP_9606.bed
-cut -f 1,2,3,5 RCP_9606.bed > RCP_9606.bed4
+cut -f 1,2,3,5 RCP_9606.bed | sort -k1,1 -k2,2n > RCP_9606.bed4
 
 cd ..
 ```
@@ -445,6 +445,12 @@ time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddi
 
 ```bash
 time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie chimeric -o /home/freddie/K562 -a /home/freddie/db/gencode.v36.annotation.gtf -g /home/freddie/db/hg38.fa -e /home/freddie/db/RCP_9606.bed4
+```
+
+- “coding” step:
+
+```bash
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie coding -o /home/freddie/K562 -m /home/freddie/db/human38_model.hdf5 -d /home/freddie/db/hg38.pep.fa
 ```
 
 - “pfam” step:
