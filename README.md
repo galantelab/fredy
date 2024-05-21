@@ -213,7 +213,7 @@ Short | Long | Description
 -o | --output-dir | Output directory. Creates the directory if it does not exist [MANDATORY]
 -a | --annotation | Gene annotation of the reference transcriptome in GTF format [MANDATORY]
 -g | --genome | FASTA file of the reference genome, which is the same one file used for reads alignment using STAR [MANDATORY]
--e | --stringtie-out | StringTie2 output events file in BED4 [MANDATORY]
+-e | --stringtie-out | ME fixed events in BED4 format [MANDATORY]
 -h | --help | Prints help message
 -T | --tmp-dir | Custom directory for temporary files [default: /tmp]
 -r | --reciprocal | Criteria for identification of chimeric events is at least 50% overlap of the event with the exon and at least 50% overlap of the exon with the event
