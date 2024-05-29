@@ -184,16 +184,23 @@ log_info "Step1"
 	#echo -e "$i\t$n_samples"
 #done > "$tdir/nsamplespertranscript.tsv"
 awk -v OFS="\t" '
-	NR==FNR {
-		v[$1]=1;
-		next
+	FNR==NR{
+		genes[$1];
+		 next
 	}
-	v[$1] && $2>0 {
-		acm[$1]++
+	FNR!=NR{
+		for (gene in genes){
+			for (i=2; i<=NF; i++){
+				if ($1==gene && $i > 0){
+					count[gene]++
+				}
+			}
+		}
 	}
-	END {
-		for (k in acm)
-			print k,acm[k]
+	END{
+		for (gene in genes){
+			print gene"\t"count[gene]
+		}
 	}' \
 	"$chimeric_most_shared_tsv" \
 	"$expression_expression_tsv" \
