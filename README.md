@@ -93,17 +93,17 @@ We provide all the necessary databases to run FREDDIE, catering to human functio
 
 File | Description
 ------------ | -------------
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/star_index.tar.gz">star_index</a> | Folder with STAR Index built with hg38.fa and gencode v36
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/gencode.v36.annotation.gtf">gencode.v36.annotation.gtf</a> | GTF file (Used in TCGA)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hg38.fa">hg38.fa</a> | Reference Genome
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hg38.fa.fai">hg38.fa.fai</a> | Index of reference genome
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hg38.pep.fa">hg38.pep.fa</a> | Aminoacid sequences of proteins
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/human38_model.hdf5">model.hdf5</a> | RNASamba model (Works for mammals in general)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm">Pfam-A.hmm</a> | HMMER model (Works to mammals in general) you need to download all files with .hmm
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3f">Pfam-A.hmm.h3f</a> | HMMER model
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3i">Pfam-A.hmm.h3i</a> | HMMER model
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3m">Pfam-A.hmm.h3m</a> | HMMER model
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3p">Pfam-A.hmm.h3p</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/index/star_index.tar.gz">star_index</a> | Folder with STAR Index built with hg38.fa and gencode v36
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_transcript/human_gv36.gtf">gencode.v36.annotation.gtf</a> | GTF file (Used in TCGA)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa">hg38.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa.fai">hg38.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.pep.fa">hg38.pep.fa</a> | Aminoacid sequences of proteins
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/rnasamba_model/model.hdf5">model.hdf5</a> | RNASamba model (Works for mammals in general)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm">Pfam-A.hmm</a> | HMMER model (Works to mammals in general) you need to download all files with .hmm
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3f">Pfam-A.hmm.h3f</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3i">Pfam-A.hmm.h3i</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3m">Pfam-A.hmm.h3m</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3p">Pfam-A.hmm.h3p</a> | HMMER model
 
 To use `star_index.tar.gz` you should uncompress the folder:
 
