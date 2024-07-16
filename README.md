@@ -18,16 +18,16 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/rmercuri/freddie">
+  <a href="https://github.com/rmercuri/fredy">
     <img src="assets/img/Logo.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h2 align="center">Freddie</h2>
+  <h2 align="center">Fredy</h2>
 
   <p align="center">
     A tool to identify exonization of retrotransposable elements using RNA-seq data. 
     <br />
-    <a href="https://github.com/rmercuri/freddie/issues">Report Bug</a>
+    <a href="https://github.com/rmercuri/fredy/issues">Report Bug</a>
   </p>
 </p>
 
@@ -66,44 +66,44 @@
 
 <!-- OVERVIEW -->
 ### Overview
-<p align="justify"> Freddie is a user-friendly pipeline designed to identify, quantify, and analyze chimeric transcripts from RNA-Seq data. The pipeline utilizes well-established tools such as StringTie2 for transcriptome assembly and quantification. In addition, machine learning algorithms provided by RNASamba are used to predict whether a transcript is coding. To further enhance the analysis, Freddie also incorporates HMMER and Python3 scripts to compare protein domains and identify potential alterations. With these tools, Freddie provides a comprehensive approach to chimeric transcript analysis that is both efficient and effective. </p>
+<p align="justify"> Fredy is a user-friendly pipeline designed to identify, quantify, and analyze chimeric transcripts from RNA-Seq data. The pipeline utilizes well-established tools such as StringTie2 for transcriptome assembly and quantification. In addition, machine learning algorithms provided by RNASamba are used to predict whether a transcript is coding. To further enhance the analysis, Fredy also incorporates HMMER and Python3 scripts to compare protein domains and identify potential alterations. With these tools, Fredy provides a comprehensive approach to chimeric transcript analysis that is both efficient and effective. </p>
 
-<a href="https://github.com/rmercuri/freddie">
+<a href="https://github.com/rmercuri/fredy">
     <img src="assets/img/Workflow.png" alt="Workflow" width=auto height=auto>
 </a>
 
 <!-- INSTALLATION -->
 ### Installation
-The source code for FREDDIE can be obtained in our github page using the following command:
+The source code for FREDY can be obtained in our github page using the following command:
 
 ```bash
-git clone https://github.com/galantelab/freddie.git
+git clone https://github.com/galantelab/fredy.git
 ```
 
-Inside FREDDIE’s directory, build a docker image:
+Inside FREDY’s directory, build a docker image:
 
 ```bash
-cd freddie
-sudo docker build -f Dockerfile -t freddie .
+cd fredy
+sudo docker build -f Dockerfile -t fredy .
 ```
 
 ### Databases
-We provide all the necessary databases to run FREDDIE, catering to human functionality. In our comprehensive documentation available in the supplementary material, we offer a step-by-step guide to generating these exact files for other species.
+We provide all the necessary databases to run FREDY, catering to human functionality. In our comprehensive documentation available in the supplementary material, we offer a step-by-step guide to generating these exact files for other species.
 
 
 File | Description
 ------------ | -------------
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/index/star_index.tar.gz">star_index</a> | Folder with STAR Index built with hg38.fa and gencode v36
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_transcript/human_gv36.gtf">gencode.v36.annotation.gtf</a> | GTF file (Used in TCGA)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa">hg38.fa</a> | Reference Genome
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa.fai">hg38.fa.fai</a> | Index of reference genome
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.pep.fa">hg38.pep.fa</a> | Aminoacid sequences of proteins
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/rnasamba_model/model.hdf5">model.hdf5</a> | RNASamba model (Works for mammals in general)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm">Pfam-A.hmm</a> | HMMER model (Works to mammals in general) you need to download all files with .hmm
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3f">Pfam-A.hmm.h3f</a> | HMMER model
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3i">Pfam-A.hmm.h3i</a> | HMMER model
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3m">Pfam-A.hmm.h3m</a> | HMMER model
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3p">Pfam-A.hmm.h3p</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/star_index.tar.gz">star_index</a> | Folder with STAR Index built with hg38.fa and gencode v36
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/human_gv36.gtf">gencode.v36.annotation.gtf</a> | GTF file (Used in TCGA)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa">hg38.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa.fai">hg38.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.pep.fa">hg38.pep.fa</a> | Aminoacid sequences of proteins
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/rnasamba_model/model.hdf5">model.hdf5</a> | RNASamba model (Works for mammals in general)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm">Pfam-A.hmm</a> | HMMER model (Works to mammals in general) you need to download all files with .hmm
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3f">Pfam-A.hmm.h3f</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3i">Pfam-A.hmm.h3i</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3m">Pfam-A.hmm.h3m</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3p">Pfam-A.hmm.h3p</a> | HMMER model
 
 To use `star_index.tar.gz` you should uncompress the folder:
 
@@ -114,14 +114,14 @@ tar -xvf star_index.tar.gz
 
 <!-- USAGE -->
 ## Usage
-FREDDIE has seven subcommands: “star”, “string”, “chimeric”, “coding”, “pfam”, “expression” and “results”.
+FREDY has seven subcommands: “star”, “string”, “chimeric”, “coding”, “pfam”, “expression” and “results”.
 
-`freddie [subcommand] <options>`
+`fredy [subcommand] <options>`
 
 Subcommands may be invoked by the help menu:
 
 ```bash
-freddie help
+fredy help
 ```
 
 Subcommand | Description
@@ -137,7 +137,7 @@ results | Compiles the final results of chimeric transcripts incorporating input
 <!-- COMMANDS AND OPTIONS -->
 ## Commands and options
 ### Star
-The first step in the FREDDIE’s pipeline is the “star”. The inputs to this command are FASTQ files and a STAR index (pre-made available <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/star_index.tar.gz">here</a>). The output is a sorted and filtered BAM aligned file, which will become the input to the next step. This command supports all types of RNA-Seq data (paired-end, single-end and long-reads), either compressed (as .gz) or not.
+The first step in the FREDY’s pipeline is the “star”. The inputs to this command are FASTQ files and a STAR index (pre-made available <a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/star_index.tar.gz">here</a>). The output is a sorted and filtered BAM aligned file, which will become the input to the next step. This command supports all types of RNA-Seq data (paired-end, single-end and long-reads), either compressed (as .gz) or not.
 
 OPTIONS:
 
@@ -156,7 +156,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <star_index-path>:/home/freddie/star_index/ -v <fastq-path>:/home/freddie/input/ -v <output-path>:/home/freddie/output/ freddie star -o test -i /home/freddie/star_index/ -f /home/freddie/input/<fastq-path>
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <star_index-path>:/home/fredy/star_index/ -v <fastq-path>:/home/fredy/input/ -v <output-path>:/home/fredy/output/ fredy star -o test -i /home/fredy/star_index/ -f /home/fredy/input/<fastq-path>
 ```
 
 Where:
@@ -167,7 +167,7 @@ Where:
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
-`<fastq-path>` is a .txt file inside `/home/freddie/input/` with the docker path (for instance `/home/freddie/input/test.fastq.gz`) to the FASTQ files.
+`<fastq-path>` is a .txt file inside `/home/fredy/input/` with the docker path (for instance `/home/fredy/input/test.fastq.gz`) to the FASTQ files.
 
 ### String
 The next step in the pipeline is “string”. This subcommand performs a transcriptome assembly with the BAMs generated in the previous step (or custom BAMs provided by the user). The output of this analysis is a GTF file representing the transcriptome from all samples.
@@ -187,7 +187,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <output-path>:/home/freddie/output/ freddie string -o test -a /home/freddie/gtf/<gtf-file>`
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/fredy/gtf/ -v <output-path>:/home/fredy/output/ fredy string -o test -a /home/fredy/gtf/<gtf-file>`
 ```
 
 Where:
@@ -196,12 +196,12 @@ Where:
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
-`<gtf-file>` is a GTF inside /home/freddie/gtf/. Ex.: `/home/freddie/gtf/gencodev36.annotation.gtf`
+`<gtf-file>` is a GTF inside /home/fredy/gtf/. Ex.: `/home/fredy/gtf/gencodev36.annotation.gtf`
 
 ### Chimeric
-In the “chimeric” step, the pipeline identifies novel transcripts based on the GTF file generated from the “string” subcommand. Here, FREDDIE uses a list of events provided by the user to find transcripts containing overlaps between exons and the given events. Again, a GTF file and also a FASTA file with all transcripts found are the outputs provided.
+In the “chimeric” step, the pipeline identifies novel transcripts based on the GTF file generated from the “string” subcommand. Here, FREDY uses a list of events provided by the user to find transcripts containing overlaps between exons and the given events. Again, a GTF file and also a FASTA file with all transcripts found are the outputs provided.
 
-<a href="https://github.com/rmercuri/freddie">
+<a href="https://github.com/rmercuri/fredy">
     <img src="assets/img/scheme_quimeric.jpg" alt="Chimeric transcript" width="1800" height="500">
 </a>
 
@@ -222,7 +222,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/freddie/gtf/ -v <genome-file-path>:/home/freddie/ref_fa/ -v <events-file-path>:/home/freddie/events/ -v <output-path>:/home/freddie/output/ freddie chimeric -o test -g /home/freddie/gtf/<gtf-file> -G /home/freddie/ref_fa/<genome-file> -i /home/freddie/events/<event-file>
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/fredy/gtf/ -v <genome-file-path>:/home/fredy/ref_fa/ -v <events-file-path>:/home/fredy/events/ -v <output-path>:/home/fredy/output/ fredy chimeric -o test -g /home/fredy/gtf/<gtf-file> -G /home/fredy/ref_fa/<genome-file> -i /home/fredy/events/<event-file>
 ```
 
 Where:
@@ -235,14 +235,14 @@ Where:
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
-`<gtf-file>` is a GTF file inside `/home/freddie/gtf/`. Ex.: `/home/freddie/gtf/gencodev36.annotation.gtf`
+`<gtf-file>` is a GTF file inside `/home/fredy/gtf/`. Ex.: `/home/fredy/gtf/gencodev36.annotation.gtf`
 
-`<genome-file>` is a .fa inside `/home/freddie/ref_fa/`. Ex.: `/home/freddie/ref_fa/hg38.fa`
+`<genome-file>` is a .fa inside `/home/fredy/ref_fa/`. Ex.: `/home/fredy/ref_fa/hg38.fa`
 
-`<events-file>` is a .bed inside `/home/freddie/events/`. Ex.: `/home/freddie/events/events.bed`
+`<events-file>` is a .bed inside `/home/fredy/events/`. Ex.: `/home/fredy/events/events.bed`
 
 ### Coding
-The “coding” subcommand classifies the novel transcripts identified in the “chimeric” step as coding or non-coding. Here, FREDDIE uses a model trained by RNASamba (available at <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/human38_model.hdf5">here</a>) to calculate the probability of a transcript being coding. In the end, a FASTA file with the protein sequences of all coding transcripts considered by our criteria is created.
+The “coding” subcommand classifies the novel transcripts identified in the “chimeric” step as coding or non-coding. Here, FREDY uses a model trained by RNASamba (available at <a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/human38_model.hdf5">here</a>) to calculate the probability of a transcript being coding. In the end, a FASTA file with the protein sequences of all coding transcripts considered by our criteria is created.
 
 OPTIONS:
 
@@ -257,7 +257,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <rnasambamodel-file-path>:/home/freddie/rnasamba/ -v <proteinseq-file-path>:/home/freddie/proteinseq/ -v <output-path>:/home/freddie/output/ freddie coding -o test -m /home/freddie/rnasamba/<rnasambamodel-file> -d /home/freddie/proteinseq/<proteinseq-file>
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <rnasambamodel-file-path>:/home/fredy/rnasamba/ -v <proteinseq-file-path>:/home/fredy/proteinseq/ -v <output-path>:/home/fredy/output/ fredy coding -o test -m /home/fredy/rnasamba/<rnasambamodel-file> -d /home/fredy/proteinseq/<proteinseq-file>
 ```
 
 Where:
@@ -268,9 +268,9 @@ Where:
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
-`<rnasambamodel-file>` is a .hdf5 inside `/home/freddie/rnasamba/`. Ex.: `/home/freddie/rnasamba/model.hdf5`
+`<rnasambamodel-file>` is a .hdf5 inside `/home/fredy/rnasamba/`. Ex.: `/home/fredy/rnasamba/model.hdf5`
 
-`<proteinseq-file>` is a .fa inside `/home/freddie/proteinseq/`. Ex.: `/home/freddie/proteinseq/hg38.pep.fa`
+`<proteinseq-file>` is a .fa inside `/home/fredy/proteinseq/`. Ex.: `/home/fredy/proteinseq/hg38.pep.fa`
 
 ### Pfam
 The “pfam” step searches for protein domains in the novel transcripts that passed the user’s predefined coding probability and subsequently compares them with the host’s protein domains. In order to identify them, we use HMMER trained with the PFAM database. The output of this subcommand is a TSV file comparing the protein domains of the novel transcripts identified with those of the host genes.
@@ -289,7 +289,7 @@ Short | Long | Description
 **Example**
   
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/freddie/pfammodel/ -v <output-path>:/home/freddie/output/ freddie pfam -o test -M <pfammodel-file>
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/fredy/pfammodel/ -v <output-path>:/home/fredy/output/ fredy pfam -o test -M <pfammodel-file>
 ```
 
 Where:
@@ -298,10 +298,10 @@ Where:
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
-`<pfammodel-file>` is a .hmm inside `/home/freddie/pfammodel/`. Ex.: `/home/freddie/pfammodel/Pfam-A.hmm`
+`<pfammodel-file>` is a .hmm inside `/home/fredy/pfammodel/`. Ex.: `/home/fredy/pfammodel/Pfam-A.hmm`
 
 ### Expression
-The FREDDIE's “expression” subcommand quantifies all the transcriptomes assembled by the StringTie2's “expression” function. The expression results, in TPM (transcript per million) per transcript per sample, are made available as a TSV file.
+The FREDY's “expression” subcommand quantifies all the transcriptomes assembled by the StringTie2's “expression” function. The expression results, in TPM (transcript per million) per transcript per sample, are made available as a TSV file.
 
 OPTIONS:
 
@@ -318,7 +318,7 @@ Short | Long | Description
 **Example**
  
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie expression -o test
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/fredy/output/ fredy expression -o test
 ```
 
 Where:
@@ -339,7 +339,7 @@ Short | Long | Description
 **Example**
   
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/freddie/output/ freddie results -o test
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/fredy/output/ fredy results -o test
 ```
 
 Where:
@@ -348,7 +348,7 @@ Where:
 
 <!-- PRACTICAL -->
 ## Practical workflow
-In order to execute FREDDIE, we selected RNA-seq paired-end data of 2 samples related to the cell line K562 from the <a href="https://www.encodeproject.org/">ENCODE Project</a>.
+In order to execute FREDY, we selected RNA-seq paired-end data of 2 samples related to the cell line K562 from the <a href="https://www.encodeproject.org/">ENCODE Project</a>.
 
 First, you should download the data:
 
@@ -376,34 +376,34 @@ mv ENCFF001RCW.fastq.gz ENCLB059ZZZ_R2.fastq.gz
 cd ..
 ```
 
-And download the databases of FREDDIE:
+And download the databases of FREDY:
 
 ```bash
 mkdir db
 cd db/
 
 ## STAR Index (Based on Human hg38 - Gencode v36)
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/star_index.tar.gz
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/star_index.tar.gz
 tar -xvf star_index.tar.gz
 
 ## Gencode v36 as the human annotation
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/gencode.v36.annotation.gtf
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/gencode.v36.annotation.gtf
 
 ## hg38 as the human reference genome
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hg38.fa
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hg38.fa
 
 ## Aminoacid sequence
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hg38.pep.fa
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hg38.pep.fa
 
 ## RNASamba model
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/human38_model.hdf5
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/human38_model.hdf5
 
 ## HMMer model
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3f
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3i
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3m
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/Pfam-A.hmm.h3p
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm.h3f
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm.h3i
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm.h3m
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm.h3p
 
 ## Retrocopies events
 wget https://bioinfohsl-tools.s3.amazonaws.com/rcpedia/downloads/beds/RCP_9606.bed
@@ -415,63 +415,63 @@ cd ..
 Then, prepare a file with the FASTQ PATHs:
 
 ```bash
-ls fastq/*fastq.gz | awk '{print "/home/freddie/"$1}' > files.txt
+ls fastq/*fastq.gz | awk '{print "/home/fredy/"$1}' > files.txt
 ```
 
 After that, install and build a docker image:
 
 ```bash
-git clone https://github.com/galantelab/freddie.git
-cd freddie
-sudo docker build -f Dockerfile -t freddie .
+git clone https://github.com/galantelab/fredy.git
+cd fredy
+sudo docker build -f Dockerfile -t fredy .
 cd ..
 ```
 
-Finally, you will be able to execute FREDDIE as follows:
+Finally, you will be able to execute fredy as follows:
 
 - “star” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie star -o /home/freddie/K562 -i /home/freddie/db/star_index -f /home/freddie/files.txt
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy star -o /home/fredy/K562 -i /home/fredy/db/star_index -f /home/fredy/files.txt
 ```
 
 - “string” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie string -o /home/freddie/K562 -a /home/freddie/db/gencode.v36.annotation.gtf
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy string -o /home/fredy/K562 -a /home/fredy/db/gencode.v36.annotation.gtf
 ```
 
 - “chimeric” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie chimeric -o /home/freddie/K562 -a /home/freddie/db/gencode.v36.annotation.gtf -g /home/freddie/db/hg38.fa -e /home/freddie/db/RCP_9606.bed4
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy chimeric -o /home/fredy/K562 -a /home/fredy/db/gencode.v36.annotation.gtf -g /home/fredy/db/hg38.fa -e /home/fredy/db/RCP_9606.bed4
 ```
 
 - “coding” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie coding -o /home/freddie/K562 -m /home/freddie/db/human38_model.hdf5 -d /home/freddie/db/hg38.pep.fa
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy coding -o /home/fredy/K562 -m /home/fredy/db/human38_model.hdf5 -d /home/fredy/db/hg38.pep.fa
 ```
 
 - “pfam” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie pfam -o /home/freddie/K562 -M /home/freddie/db/Pfam-A.hmm
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy pfam -o /home/fredy/K562 -M /home/fredy/db/Pfam-A.hmm
 ```
 
 - “expression” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie expression -o /home/freddie/K562
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy expression -o /home/fredy/K562
 ```
 
 - “results” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/freddie freddie results -o /home/freddie/K562
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy results -o /home/fredy/K562
 ```
 
-All information related to the chimeric transcripts identified by FREDDIE are available in the final output named “results.tsv”. If you wish to inspect these transcripts in a Genome Browser such as at <a href="https://genome.ucsc.edu/cgi-bin/hgGateway">UCSC</a> you can easily upload the “K562/chimeric/chimeric.gtf” file, also provided by the FREDDIE’s pipeline, to the “custom tracks”.
+All information related to the chimeric transcripts identified by FREDY are available in the final output named “results.tsv”. If you wish to inspect these transcripts in a Genome Browser such as at <a href="https://genome.ucsc.edu/cgi-bin/hgGateway">UCSC</a> you can easily upload the “K562/chimeric/chimeric.gtf” file, also provided by the FREDY’s pipeline, to the “custom tracks”.
 
 <!-- CONTACT -->
 ## Contact
@@ -482,7 +482,7 @@ Thiago Luiz Araújo Miller - (tmiller@mochsl.org.br)
 
 Pedro Alexandre Favoretto Galante - (pgalante@mochsl.org.br)
 
-Project Link: [https://github.com/galantelab/freddie](https://github.com/galantelab/freddie)
+Project Link: [https://github.com/galantelab/fredy](https://github.com/galantelab/fredy)
 
 <!-- AUTHORS -->
 ## Authors
