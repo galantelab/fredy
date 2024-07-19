@@ -6,7 +6,7 @@ usage() {
 
 [[ $# == 0 ]] && { usage; exit; }
 
-cmd="bin/freddie_${1}"
+cmd="bin/fredy_${1}"
 
 if [[ -f "$cmd" ]]; then
 	echo "Command '$cmd' already exist" >&2
@@ -29,7 +29,7 @@ set -o nounset
 BIN_DIR="$(cd $(dirname $(readlink -f "${BASH_SOURCE[0]}")) && pwd)"
 
 # Load common lib
-source "$BIN_DIR/../lib/freddie_common"
+source "$BIN_DIR/../lib/fredy_common"
 
 # My name
 SCRIPT_NAME="${0##*/}"

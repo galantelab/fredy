@@ -46,19 +46,19 @@ RUN mkdir -p /tmp/${STAR} \
     && install -m 755 /tmp/${STAR}/bin/Linux_x86_64_static/* /usr/local/bin \
     && rm -rf /tmp/${STAR}
 
-# Get the freddie source
-COPY . /tmp/freddie/
+# Get the fredy source
+COPY . /tmp/fredy/
 
-# Install freddie to /usr/local
-RUN make -f /tmp/freddie/Makefile install 2> /dev/null \
-    && rm -rf /tmp/freddie
+# Install fredy to /usr/local
+RUN make -f /tmp/fredy/Makefile install 2> /dev/null \
+    && rm -rf /tmp/fredy
 
-# Create freddie user
-RUN useradd -ms /bin/bash freddie
-USER freddie
+# Create fredy user
+RUN useradd -ms /bin/bash fredy
+USER fredy
 
 # Set our workdir
-VOLUME /home/freddie
-WORKDIR /home/freddie
+VOLUME /home/fredy
+WORKDIR /home/fredy
 
-ENTRYPOINT ["freddie"]
+ENTRYPOINT ["fredy"]
