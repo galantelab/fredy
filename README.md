@@ -25,7 +25,7 @@
   <h2 align="center">Fredy</h2>
 
   <p align="center">
-    A tool to identify exonization of retrotransposable elements using RNA-seq data. 
+    A tool to identify exonization of retrotransposable elements using RNA-seq data.
     <br />
     <a href="https://github.com/rmercuri/fredy/issues">Report Bug</a>
   </p>
@@ -41,7 +41,8 @@
     <li>
       <a href="#installation">Installation</a>
       <ul>
-        <li><a href="#installation">Docker installation</a></li>
+        <li><a href="#manual-installation">Manual installation</a></li>
+        <li><a href="#pulling-image">Pulling image</a></li>
         <li><a href="#databases">Databases</a></li>
       </ul>
     </li>
@@ -65,7 +66,7 @@
 </details>
 
 <!-- OVERVIEW -->
-### Overview
+## Overview
 <p align="justify"> Fredy is a user-friendly pipeline designed to identify, quantify, and analyze chimeric transcripts from RNA-Seq data. The pipeline utilizes well-established tools such as StringTie2 for transcriptome assembly and quantification. In addition, machine learning algorithms provided by RNASamba are used to predict whether a transcript is coding. To further enhance the analysis, Fredy also incorporates HMMER and Python3 scripts to compare protein domains and identify potential alterations. With these tools, Fredy provides a comprehensive approach to chimeric transcript analysis that is both efficient and effective. </p>
 
 <a href="https://github.com/rmercuri/fredy">
@@ -73,7 +74,9 @@
 </a>
 
 <!-- INSTALLATION -->
-### Installation
+## Installation
+
+### Manual installation
 The source code for FREDY can be obtained in our github page using the following command:
 
 ```bash
@@ -85,6 +88,13 @@ Inside FREDY’s directory, build a docker image:
 ```bash
 cd fredy
 sudo docker build -f Dockerfile -t fredy .
+```
+
+### Pulling image
+You can acquire a built docker image from [Docker Hub](https://hub.docker.com) registry:
+
+```bash
+sudo docker pull galantelab/fredy
 ```
 
 ### Databases
@@ -287,7 +297,7 @@ Short | Long | Description
 -E | --e-value | In the HMMER per-target output, reports target sequences with an e-value lesser than NUM [default: 1e-6]
 
 **Example**
-  
+
 ```bash
 docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/fredy/pfammodel/ -v <output-path>:/home/fredy/output/ fredy pfam -o test -M <pfammodel-file>
 ```
@@ -316,7 +326,7 @@ Short | Long | Description
 -L | --long-reads | Set the sequencing to long reads
 
 **Example**
- 
+
 ```bash
 docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/fredy/output/ fredy expression -o test
 ```
@@ -337,7 +347,7 @@ Short | Long | Description
 -T | --tmp-dir | Custom directory for temporary files [default: /tmp]
 
 **Example**
-  
+
 ```bash
 docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/fredy/output/ fredy results -o test
 ```
