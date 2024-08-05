@@ -1,5 +1,5 @@
 #
-# Makefile for freddie project
+# Makefile for fredy project
 #
 
 # Set the default shell
@@ -10,12 +10,12 @@ ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 # Variables used during the installation
 PREFIX ?= /usr/local
-PROJECT_NAME := freddie
+PROJECT_NAME := fredy
 INSTALL_DIR = $(DESTDIR)$(PREFIX)/share/$(PROJECT_NAME)
 BIN_DIR = $(DESTDIR)$(PREFIX)/bin
 
 # Get script version
-APP_VERSION := $(shell ./bin/freddie --version)
+APP_VERSION := $(shell ./bin/fredy --version)
 
 # Get VCS latest tag
 VCS_VERSION := $(shell git describe --abbrev=0 --tags)
@@ -34,7 +34,7 @@ VCS_IS_MAIN_BRANCH := 0
 endif
 
 # Our image name
-DOCKER_IMG := galantelab/freddie
+DOCKER_IMG := galantelab/fredy
 
 # Set latest or dev to docker image accordig
 # to the branch
@@ -46,11 +46,11 @@ DOCKER_TAG := $(if $(VCS_IS_MAIN_BRANCH),latest,dev)
 .PHONY: help
 
 help:
-	@echo "Makefile for freddie project"
+	@echo "Makefile for fredy project"
 	@echo ""
 	@echo "==> Installation"
-	@echo "install            Install freddie"
-	@echo "uninstall          Uninstall freddie"
+	@echo "install            Install fredy"
+	@echo "uninstall          Uninstall fredy"
 	@echo ""
 	@echo "==> Manage git"
 	@echo "git-check-status   Check if the wordir is dirty"
