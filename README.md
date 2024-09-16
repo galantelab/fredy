@@ -107,7 +107,7 @@ File | Description
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_transcript/human_gv36.gtf">gencode.v36.annotation.gtf</a> | GTF file (Used in TCGA)
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa">hg38.fa</a> | Reference Genome
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa.fai">hg38.fa.fai</a> | Index of reference genome
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.pep.fa">hg38.pep.fa</a> | Aminoacid sequences of proteins
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_protein/human.pep.fa">hg38.pep.fa</a> | Aminoacid sequences of proteins
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/rnasamba_model/model.hdf5">model.hdf5</a> | RNASamba model (Works for mammals in general)
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm">Pfam-A.hmm</a> | HMMER model (Works to mammals in general) you need to download all files with .hmm
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3f">Pfam-A.hmm.h3f</a> | HMMER model
