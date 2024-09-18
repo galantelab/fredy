@@ -115,11 +115,11 @@ File | Description
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3m">Pfam-A.hmm.h3m</a> | HMMER model
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3p">Pfam-A.hmm.h3p</a> | HMMER model
 
-To use `star_index.tar.gz` you should uncompress the folder:
+To use `human_star_index.tar.gz` you should uncompress the folder:
 
 
 ```bash
-tar -xvf star_index.tar.gz
+tar -xvf human_star_index.tar.gz
 ```
 
 <!-- USAGE -->
