@@ -103,11 +103,11 @@ We provide all the necessary databases to run FREDY, catering to human functiona
 
 File | Description
 ------------ | -------------
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/index/human_star_index.tar.gz">star_index</a> | Folder with STAR Index built with hg38.fa and gencode v36
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_transcript/human_gv36.gtf">gencode.v36.annotation.gtf</a> | GTF file (Used in TCGA)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa">hg38.fa</a> | Reference Genome
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa.fai">hg38.fa.fai</a> | Index of reference genome
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_protein/human.pep.fa">hg38.pep.fa</a> | Aminoacid sequences of proteins
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/index/human_star_index.tar.gz">human_star_index.tar.gz</a> | Folder with STAR Index built with hg38.fa and gencode v36
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_transcript/human_gv36.gtf">human_gv36.gtf</a> | GTF file (Gencode V36 Used in TCGA)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa">human.fa</a> | Reference Genome (hg38)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa.fai">human.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_protein/human.pep.fa">human.pep.fa</a> | Aminoacid sequences of proteins
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/rnasamba_model/model.hdf5">model.hdf5</a> | RNASamba model (Works for mammals in general)
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm">Pfam-A.hmm</a> | HMMER model (Works to mammals in general) you need to download all files with .hmm
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3f">Pfam-A.hmm.h3f</a> | HMMER model
@@ -147,7 +147,7 @@ results | Compiles the final results of chimeric transcripts incorporating input
 <!-- COMMANDS AND OPTIONS -->
 ## Commands and options
 ### Star
-The first step in the FREDY’s pipeline is the “star”. The inputs to this command are FASTQ files and a STAR index (pre-made available <a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/star_index.tar.gz">here</a>). The output is a sorted and filtered BAM aligned file, which will become the input to the next step. This command supports all types of RNA-Seq data (paired-end, single-end and long-reads), either compressed (as .gz) or not.
+The first step in the FREDY’s pipeline is the “star”. The inputs to this command are FASTQ files and a STAR index (pre-made available <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/index/human_star_index.tar.gz">here</a>). The output is a sorted and filtered BAM aligned file, which will become the input to the next step. This command supports all types of RNA-Seq data (paired-end, single-end and long-reads), either compressed (as .gz) or not.
 
 OPTIONS:
 
@@ -202,11 +202,11 @@ docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/fredy/gt
 
 Where:
 
-`<gtf-file-path>` is the directory where gtf was downloaded. Ex.: if `$PWD/gencodev36.annotation.gtf` type `$PWD/`
+`<gtf-file-path>` is the directory where gtf was downloaded. Ex.: if `$PWD/human_gv36.gtf` type `$PWD/`
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
-`<gtf-file>` is a GTF inside /home/fredy/gtf/. Ex.: `/home/fredy/gtf/gencodev36.annotation.gtf`
+`<gtf-file>` is a GTF inside /home/fredy/gtf/. Ex.: `/home/fredy/gtf/human_gv36.gtf`
 
 ### Chimeric
 In the “chimeric” step, the pipeline identifies novel transcripts based on the GTF file generated from the “string” subcommand. Here, FREDY uses a list of events provided by the user to find transcripts containing overlaps between exons and the given events. Again, a GTF file and also a FASTA file with all transcripts found are the outputs provided.
@@ -237,17 +237,17 @@ docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/fredy/gt
 
 Where:
 
-`<gtf-file-path>` is the directory where GTF file was downloaded. Ex.: if `$PWD/gencodev36.annotation.gtf` type `$PWD/`
+`<gtf-file-path>` is the directory where GTF file was downloaded. Ex.: if `$PWD/human_gv36.gtf` type `$PWD/`
 
-`<genome-file-path>` is the directory where the reference genome and reference genome index were downloaded. Ex.: if `$PWD/hg38.fa` type `$PWD/`
+`<genome-file-path>` is the directory where the reference genome and reference genome index were downloaded. Ex.: if `$PWD/human.fa` type `$PWD/`
 
 `<events-file-path>` is the directory where the events are. Ex.: if `$PWD/events.bed` type `$PWD/`
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
-`<gtf-file>` is a GTF file inside `/home/fredy/gtf/`. Ex.: `/home/fredy/gtf/gencodev36.annotation.gtf`
+`<gtf-file>` is a GTF file inside `/home/fredy/gtf/`. Ex.: `/home/fredy/gtf/human_gv36.gtf`
 
-`<genome-file>` is a .fa inside `/home/fredy/ref_fa/`. Ex.: `/home/fredy/ref_fa/hg38.fa`
+`<genome-file>` is a .fa inside `/home/fredy/ref_fa/`. Ex.: `/home/fredy/ref_fa/human.fa`
 
 `<events-file>` is a .bed inside `/home/fredy/events/`. Ex.: `/home/fredy/events/events.bed`
 
@@ -274,13 +274,13 @@ Where:
 
 `<rnasambamodel-file-path>` is the directory where RNASamba model was downloaded. Ex.: if `$PWD/model.hdf5` type `$PWD/`
 
-`<proteinseq-file-path>` is the directory where the protein sequences file was downloaded. Ex.: if `$PWD/hg38.pep.fa` type `$PWD/`
+`<proteinseq-file-path>` is the directory where the protein sequences file was downloaded. Ex.: if `$PWD/human.pep.fa` type `$PWD/`
 
 `<output-path>` is the output directory. Ex.: `$PWD/output/`
 
 `<rnasambamodel-file>` is a .hdf5 inside `/home/fredy/rnasamba/`. Ex.: `/home/fredy/rnasamba/model.hdf5`
 
-`<proteinseq-file>` is a .fa inside `/home/fredy/proteinseq/`. Ex.: `/home/fredy/proteinseq/hg38.pep.fa`
+`<proteinseq-file>` is a .fa inside `/home/fredy/proteinseq/`. Ex.: `/home/fredy/proteinseq/human.pep.fa`
 
 ### Pfam
 The “pfam” step searches for protein domains in the novel transcripts that passed the user’s predefined coding probability and subsequently compares them with the host’s protein domains. In order to identify them, we use HMMER trained with the PFAM database. The output of this subcommand is a TSV file comparing the protein domains of the novel transcripts identified with those of the host genes.
@@ -393,27 +393,28 @@ mkdir db
 cd db/
 
 ## STAR Index (Based on Human hg38 - Gencode v36)
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/star_index.tar.gz
-tar -xvf star_index.tar.gz
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/index/human_star_index.tar.gz
+tar -xvf human_star_index.tar.gz
 
 ## Gencode v36 as the human annotation
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/gencode.v36.annotation.gtf
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_transcript/human_gv36.gtf
 
 ## hg38 as the human reference genome
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hg38.fa
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa.fai
 
 ## Aminoacid sequence
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hg38.pep.fa
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_protein/human.pep.fa
 
 ## RNASamba model
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/human38_model.hdf5
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/rnasamba_model/model.hdf5
 
 ## HMMer model
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm.h3f
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm.h3i
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm.h3m
-wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/Pfam-A.hmm.h3p
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3f
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3i
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3m
+wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3p
 
 ## Retrocopies events
 wget https://bioinfohsl-tools.s3.amazonaws.com/rcpedia/downloads/beds/RCP_9606.bed
@@ -442,25 +443,25 @@ Finally, you will be able to execute fredy as follows:
 - “star” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy star -o /home/fredy/K562 -i /home/fredy/db/star_index -f /home/fredy/files.txt
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy star -o /home/fredy/K562 -i /home/fredy/db/human_star_index -f /home/fredy/files.txt
 ```
 
 - “string” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy string -o /home/fredy/K562 -a /home/fredy/db/gencode.v36.annotation.gtf
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy string -o /home/fredy/K562 -a /home/fredy/db/human_gv36.gtf
 ```
 
 - “chimeric” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy chimeric -o /home/fredy/K562 -a /home/fredy/db/gencode.v36.annotation.gtf -g /home/fredy/db/hg38.fa -e /home/fredy/db/RCP_9606.bed4
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy chimeric -o /home/fredy/K562 -a /home/fredy/db/human_gv36.gtf -g /home/fredy/db/human.fa -e /home/fredy/db/RCP_9606.bed4
 ```
 
 - “coding” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy coding -o /home/fredy/K562 -m /home/fredy/db/human38_model.hdf5 -d /home/fredy/db/hg38.pep.fa
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy coding -o /home/fredy/K562 -m /home/fredy/db/model.hdf5 -d /home/fredy/db/human.pep.fa
 ```
 
 - “pfam” step:
