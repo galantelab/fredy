@@ -443,7 +443,7 @@ Finally, you will be able to execute fredy as follows:
 - “star” step:
 
 ```bash
-time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy star -o /home/fredy/K562 -i /home/fredy/db/human_star_index -f /home/fredy/files.txt
+time docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v $PWD:/home/fredy fredy star -o /home/fredy/K562 -i /home/fredy/db/star_index -f /home/fredy/files.txt
 ```
 
 - “string” step:
