@@ -103,17 +103,17 @@ We provide all the necessary databases to run FREDY, catering to human functiona
 
 File | Description
 ------------ | -------------
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/index/human_star_index.tar.gz">human_star_index.tar.gz</a> | Folder with STAR Index built with hg38.fa and gencode v36
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_transcript/human_gv36.gtf">human_gv36.gtf</a> | GTF file (Gencode V36 Used in TCGA)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa">human.fa</a> | Reference Genome (hg38)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa.fai">human.fa.fai</a> | Index of reference genome
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_protein/human.pep.fa">human.pep.fa</a> | Aminoacid sequences of proteins
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/rnasamba_model/model.hdf5">model.hdf5</a> | RNASamba model (Works for mammals in general)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm">Pfam-A.hmm</a> | HMMER model (Works to mammals in general) you need to download all files with .hmm
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3f">Pfam-A.hmm.h3f</a> | HMMER model
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3i">Pfam-A.hmm.h3i</a> | HMMER model
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3m">Pfam-A.hmm.h3m</a> | HMMER model
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3p">Pfam-A.hmm.h3p</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/human_star_index.tar.gz">human_star_index.tar.gz</a> | Folder with STAR Index built with hg38.fa and gencode v36
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/human_gv36.gtf">human_gv36.gtf</a> | GTF file (Gencode V36 Used in TCGA)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa">human.fa</a> | Reference Genome (hg38)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa.fai">human.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/human.pep.fa">human.pep.fa</a> | Aminoacid sequences of proteins
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/rnasamba_model/model.hdf5">model.hdf5</a> | RNASamba model (Works for mammals in general)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm">Pfam-A.hmm</a> | HMMER model (Works to mammals in general) you need to download all files with .hmm
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3f">Pfam-A.hmm.h3f</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3i">Pfam-A.hmm.h3i</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3m">Pfam-A.hmm.h3m</a> | HMMER model
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3p">Pfam-A.hmm.h3p</a> | HMMER model
 
 To use `human_star_index.tar.gz` you should uncompress the folder:
 
@@ -147,7 +147,7 @@ results | Compiles the final results of chimeric transcripts incorporating input
 <!-- COMMANDS AND OPTIONS -->
 ## Commands and options
 ### Star
-The first step in the FREDY’s pipeline is the “star”. The inputs to this command are FASTQ files and a STAR index (pre-made available <a href="https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/index/human_star_index.tar.gz">here</a>). The output is a sorted and filtered BAM aligned file, which will become the input to the next step. This command supports all types of RNA-Seq data (paired-end, single-end and long-reads), either compressed (as .gz) or not.
+The first step in the FREDY’s pipeline is the “star”. The inputs to this command are FASTQ files and a STAR index (pre-made available <a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/human_star_index.tar.gz">here</a>). The output is a sorted and filtered BAM aligned file, which will become the input to the next step. This command supports all types of RNA-Seq data (paired-end, single-end and long-reads), either compressed (as .gz) or not.
 
 OPTIONS:
 
@@ -393,28 +393,28 @@ mkdir db
 cd db/
 
 ## STAR Index (Based on Human hg38 - Gencode v36)
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/index/human_star_index.tar.gz
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/human_star_index.tar.gz
 tar -xvf human_star_index.tar.gz
 
 ## Gencode v36 as the human annotation
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_transcript/human_gv36.gtf
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/human_gv36.gtf
 
 ## hg38 as the human reference genome
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_genomes/human.fa.fai
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa.fai
 
 ## Aminoacid sequence
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/reference_protein/human.pep.fa
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/human.pep.fa
 
 ## RNASamba model
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/rnasamba_model/model.hdf5
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/rnasamba_model/model.hdf5
 
 ## HMMer model
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3f
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3i
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3m
-wget https://bioinfohsl-tools.s3.amazonaws.com/freddie/databases/hmm_model/Pfam-A.hmm.h3p
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3f
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3i
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3m
+wget https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3p
 
 ## Retrocopies events
 wget https://bioinfohsl-tools.s3.amazonaws.com/rcpedia/downloads/beds/RCP_9606.bed
