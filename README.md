@@ -22,7 +22,8 @@
     <img src="assets/img/Logo.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h2 align="center">Fredy</h2>
+  <h2 align="center">FREDY</h2>
+  <h4 align="center">(<ins>F</ins>inding <ins>R</ins>etrotransposon <ins>E</ins>xonization <ins>Dy</ins>namics)</h4>
 
   <p align="center">
     A tool to identify exonization of retrotransposable elements using RNA-seq data.
