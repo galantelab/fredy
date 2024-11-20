@@ -45,6 +45,10 @@
         <li><a href="#manual-installation">Manual installation</a></li>
         <li><a href="#pulling-image">Pulling image</a></li>
         <li><a href="#databases">Databases</a></li>
+        <ul>
+          <li><a href="#general">General</a></li>
+          <li><a href="#by-specie">Species</a></li>
+        </ul>
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
@@ -101,14 +105,9 @@ sudo docker pull galantelab/fredy
 ### Databases
 We provide all the necessary databases to run FREDY, catering to human functionality. In our comprehensive documentation available in the supplementary material, we offer a step-by-step guide to generating these exact files for other species.
 
-
+#### General
 File | Description
 ------------ | -------------
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/human_star_index.tar.gz">human_star_index.tar.gz</a> | Folder with STAR Index built with hg38.fa and gencode v36
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/human_gv36.gtf">human_gv36.gtf</a> | GTF file (Gencode V36 Used in TCGA)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa">human.fa</a> | Reference Genome (hg38)
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa.fai">human.fa.fai</a> | Index of reference genome
-<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/human.pep.fa">human.pep.fa</a> | Aminoacid sequences of proteins
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/rnasamba_model/model.hdf5">model.hdf5</a> | RNASamba model (Works for mammals in general)
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm">Pfam-A.hmm</a> | HMMER model (Works to mammals in general) you need to download all files with .hmm
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3f">Pfam-A.hmm.h3f</a> | HMMER model
@@ -116,11 +115,102 @@ File | Description
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3m">Pfam-A.hmm.h3m</a> | HMMER model
 <a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/hmm_model/Pfam-A.hmm.h3p">Pfam-A.hmm.h3p</a> | HMMER model
 
-To use `human_star_index.tar.gz` you should uncompress the folder:
+#### By Specie
+##### Human
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/human_star_index.tar.gz">human_star_index.tar.gz</a> | Folder with STAR Index built with hg38.fa and gencode v36
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/human_gv36.gtf">human_gv36.gtf</a> | GTF file (Gencode V36 Used in TCGA)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa">human.fa</a> | Reference Genome (hg38)
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/human.fa.fai">human.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/human.pep.fa">human.pep.fa</a> | Aminoacid sequences of proteins
+
+##### Chimp
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/chimp_star_index.tar.gz">chimp_star_index.tar.gz</a> | Folder with STAR Index
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/chimp_pantro6.gtf">chimp_pantro6.gtf</a> | GTF file
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/chimp.fa">chimp.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/chimp.fa.fai">chimp.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/chimp.pep.fa">chimp.pep.fa</a> | Aminoacid sequences of proteins
+
+##### Cow
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/cow_star_index.tar.gz">cow_star_index.tar.gz</a> | Folder with STAR Index
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/cow_bostau9.gtf">cow_bostau9.gtf</a> | GTF file
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/cow.fa">cow.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/cow.fa.fai">cow.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/cow.pep.fa">cow.pep.fa</a> | Aminoacid sequences of proteins
+
+##### Dog
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/dog_star_index.tar.gz">dog_star_index.tar.gz</a> | Folder with STAR Index
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/dog_cfam1.gtf">dog_cfam1.gtf</a> | GTF file
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/dog.fa">dog.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/dog.fa.fai">dog.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/dog.pep.fa">dog.pep.fa</a> | Aminoacid sequences of proteins
+
+##### Marmoset
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/marmoset_star_index.tar.gz">marmoset_star_index.tar.gz</a> | Folder with STAR Index
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/marmoset_cj1700.gtf">marmoset_cj1700.gtf</a> | GTF file
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/marmoset.fa">marmoset.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/marmoset.fa.fai">marmoset.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/marmoset.pep.fa">marmoset.pep.fa</a> | Aminoacid sequences of proteins
+
+##### Mouse
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/mouse_star_index.tar.gz">mouse_star_index.tar.gz</a> | Folder with STAR Index
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/mouse_GRCm39.gtf">mouse_GRCm39.gtf</a> | GTF file
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/mouse.fa">mouse.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/mouse.fa.fai">mouse.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/mouse.pep.fa">mouse.pep.fa</a> | Aminoacid sequences of proteins
+
+##### Opossum
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/opossum_star_index.tar.gz">opossum_star_index.tar.gz</a> | Folder with STAR Index
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/opossum_mondom5.gtf">opossum_mondom5.gtf</a> | GTF file
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/opossum.fa">opossum.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/opossum.fa.fai">opossum.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/opossum.pep.fa">opossum.pep.fa</a> | Aminoacid sequences of proteins
+
+##### Platypus
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/platypus_star_index.tar.gz">platypus_star_index.tar.gz</a> | Folder with STAR Index
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/platypus_mornana1.gtf">platypus_mornana1.gtf</a> | GTF file
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/platypus.fa">platypus.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/platypus.fa.fai">platypus.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/platypus.pep.fa">platypus.pep.fa</a> | Aminoacid sequences of proteins
+
+##### Rat
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/rat_star_index.tar.gz">rat_star_index.tar.gz</a> | Folder with STAR Index
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/rat_rn6.gtf">rat_rn6.gtff</a> | GTF file
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/rat.fa">rat.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/rat.fa.fai">rat.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/rat.pep.fa">rat.pep.fa</a> | Aminoacid sequences of proteins
+
+##### Rhesus
+File | Description
+------------ | -------------
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/index/rhesus_star_index.tar.gz">rhesus_star_index.tar.gz</a> | Folder with STAR Index
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_transcript/rhesus_rhemac10.gtf">rhesus_rhemac10.gtf</a> | GTF file
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/rhesus.fa">rhesus.fa</a> | Reference Genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_genomes/rhesus.fa.fai">rhesus.fa.fai</a> | Index of reference genome
+<a href="https://bioinfohsl-tools.s3.amazonaws.com/fredy/databases/reference_protein/rhesus.pep.fa">rhesus.pep.fa</a> | Aminoacid sequences of proteins
+
+To use `${specie}_star_index.tar.gz` you should uncompress the folder:
 
 
 ```bash
-tar -xvf human_star_index.tar.gz
+tar -xvf ${specie}_star_index.tar.gz
 ```
 
 <!-- USAGE -->
