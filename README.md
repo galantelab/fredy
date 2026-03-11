@@ -29,6 +29,7 @@
     A tool to identify exonization of retrotransposable elements using RNA-seq data.
     <br />
     <a href="https://github.com/rmercuri/fredy/issues">Report Bug</a>
+    <a href="https://www.biorxiv.org/content/10.1101/2024.04.22.590610v1.full">Paper</a>
   </p>
 </p>
 
@@ -67,6 +68,7 @@
     <li><a href="#practical-workflow">Practical Workflow</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#authors">Authors</a></li>
+    <li><a href="#citation">Citation</a></li>
   </ol>
 </details>
 
@@ -77,6 +79,7 @@
 <a href="https://github.com/rmercuri/fredy">
     <img src="assets/img/Workflow.png" alt="Workflow" width=auto height=auto>
 </a>
+<p align="justify"> <b>Figure 1</b> The FREDDIE pipeline begins with RNA-seq data in FASTQ format together with reference files, including the genome (FASTA), transcriptome annotation (GTF), and retroelement coordinates (BED). After verifying the integrity of the input files, reads are aligned to the reference genome using STAR. Transcripts are then assembled with StringTie2 based on gene annotations. The pipeline identifies and separates chimeric transcripts containing exonized transposable elements (“Chimeric”) from canonical transcripts (“Canonical”). The coding potential of chimeric transcripts is evaluated using RNASamba, while HMMER and Pfam analyze the protein domain composition of coding transcripts. Finally, transcript expression levels are quantified in TPM using StringTie, producing as final outputs the expression of chimeric transcripts and a comparison of protein domain composition between chimeric and canonical transcripts.</p>
 
 <!-- INSTALLATION -->
 ## Installation
@@ -599,6 +602,12 @@ Matheus de Lima
 Aline Rangel-Pozzo
 
 Pedro Alexandre Favoretto Galante
+
+<a href="https://www.bioinfo.mochsl.org.br/">Galante's Lab Site</a>
+
+<!-- CITATION -->
+## Citation
+Mercuri, Rafael LV, Thiago LA Miller, Filipe F. dos Santos, Matheus F. de Lima, Aline Rangel-Pozzo, and Pedro AF Galante. "FREDDIE: A comprehensive tool for detecting exonization of retrotransposable elements in short and long RNA sequencing data." bioRxiv (2024): 2024-04.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
