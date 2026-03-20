@@ -260,7 +260,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <star_index-path>:/home/fredy/star_index/ -v <fastq-path>:/home/fredy/input/ -v <output-path>:/home/fredy/output/ fredy star -o test -i /home/fredy/star_index/ -f /home/fredy/input/<fastq-path>
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <star_index-path>:/home/fredy/star_index/ -v <fastq-path>:/home/fredy/input/ -v <output-path>:/home/fredy/output/ fredy star -o /home/fredy/output/test -i /home/fredy/star_index/ -f /home/fredy/input/<fastq-path>
 ```
 
 Where:
@@ -291,7 +291,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/fredy/gtf/ -v <output-path>:/home/fredy/output/ fredy string -o test -a /home/fredy/gtf/<gtf-file>`
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/fredy/gtf/ -v <output-path>:/home/fredy/output/ fredy string -o /home/fredy/output/test -a /home/fredy/gtf/<gtf-file>
 ```
 
 Where:
@@ -326,7 +326,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/fredy/gtf/ -v <genome-file-path>:/home/fredy/ref_fa/ -v <events-file-path>:/home/fredy/events/ -v <output-path>:/home/fredy/output/ fredy chimeric -o test -g /home/fredy/gtf/<gtf-file> -G /home/fredy/ref_fa/<genome-file> -i /home/fredy/events/<event-file>
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <gtf-file-path>:/home/fredy/gtf/ -v <genome-file-path>:/home/fredy/ref_fa/ -v <events-file-path>:/home/fredy/events/ -v <output-path>:/home/fredy/output/ fredy chimeric -o /home/fredy/output/test -g /home/fredy/gtf/<gtf-file> -G /home/fredy/ref_fa/<genome-file> -i /home/fredy/events/<event-file>
 ```
 
 Where:
@@ -361,7 +361,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <rnasambamodel-file-path>:/home/fredy/rnasamba/ -v <proteinseq-file-path>:/home/fredy/proteinseq/ -v <output-path>:/home/fredy/output/ fredy coding -o test -m /home/fredy/rnasamba/<rnasambamodel-file> -d /home/fredy/proteinseq/<proteinseq-file>
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <rnasambamodel-file-path>:/home/fredy/rnasamba/ -v <proteinseq-file-path>:/home/fredy/proteinseq/ -v <output-path>:/home/fredy/output/ fredy coding -o /home/fredy/output/test -m /home/fredy/rnasamba/<rnasambamodel-file> -d /home/fredy/proteinseq/<proteinseq-file>
 ```
 
 Where:
@@ -393,7 +393,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/fredy/pfammodel/ -v <output-path>:/home/fredy/output/ fredy pfam -o test -M <pfammodel-file>
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <pfammodel-file-path>:/home/fredy/pfammodel/ -v <output-path>:/home/fredy/output/ fredy pfam -o /home/fredy/output/test -M <pfammodel-file>
 ```
 
 Where:
@@ -422,7 +422,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/fredy/output/ fredy expression -o test
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/fredy/output/ fredy expression -o /home/fredy/output/test
 ```
 
 Where:
@@ -443,7 +443,7 @@ Short | Long | Description
 **Example**
 
 ```bash
-docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/fredy/output/ fredy results -o test
+docker run --rm -u $(id -u):$(id -g) -w $(pwd) -v <output-path>:/home/fredy/output/ fredy results -o /home/fredy/output/test
 ```
 
 Where:
